@@ -1,11 +1,14 @@
 package com.xeepl.erp.controller;
 
-import com.xeepl.erp.dto.*;
+import com.xeepl.erp.dto.SectionCreateDTO;
+import com.xeepl.erp.dto.SectionDTO;
+import com.xeepl.erp.dto.SectionUpdateDTO;
 import com.xeepl.erp.service.SectionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import jakarta.validation.Valid;
+
 import java.util.List;
 
 @RestController
@@ -15,28 +18,30 @@ public class SectionController {
 
     private final SectionService sectionService;
 
-    @PostMapping
-    public ResponseEntity<SectionDTO> create(@Valid @RequestBody SectionCreateDTO dto) {
-        return ResponseEntity.status(201).body(sectionService.createSection(dto));
-    }
-
     @GetMapping
-    public ResponseEntity<List<SectionDTO>> getAll() {
+    public ResponseEntity<List<SectionDTO>> getAllSections() {
         return ResponseEntity.ok(sectionService.getAllSections());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SectionDTO> getById(@PathVariable Long id) {
+    public ResponseEntity<SectionDTO> getSectionById(@PathVariable Long id) {
         return ResponseEntity.ok(sectionService.getSectionById(id));
     }
 
+    @PostMapping
+    public ResponseEntity<SectionDTO> createSection(@RequestBody SectionCreateDTO dto) {
+        SectionDTO created = sectionService.createSection(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
     @PutMapping("/{id}")
-    public ResponseEntity<SectionDTO> update(@PathVariable Long id, @RequestBody SectionUpdateDTO dto) {
-        return ResponseEntity.ok(sectionService.updateSection(id, dto));
+    public ResponseEntity<SectionDTO> updateSection(@PathVariable Long id, @RequestBody SectionUpdateDTO dto) {
+        SectionDTO updated = sectionService.updateSection(id, dto);
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteSection(@PathVariable Long id) {
         sectionService.deleteSection(id);
         return ResponseEntity.noContent().build();
     }

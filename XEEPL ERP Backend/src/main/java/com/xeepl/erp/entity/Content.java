@@ -12,15 +12,16 @@ public class Content {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // required title, length 500
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "section_id")
+    private Section section;
+
     @Column(nullable = false, length = 500)
     private String title;
 
-    // sequence default 0
     @Column(columnDefinition = "INT DEFAULT 0")
     private Integer sequence = 0;
 
-    // textual description (TEXT)
     @Column(columnDefinition = "TEXT")
     private String description;
 
@@ -30,8 +31,9 @@ public class Content {
     @Column(length = 500)
     private String link;
 
+    // Image fields
     @Column(name = "image_path", length = 500)
-    private String imagePath;
+    private String imagePath; // e.g., content-images/uuid.jpg
 
     @Column(name = "image_type", length = 50)
     private String imageType;
@@ -39,10 +41,8 @@ public class Content {
     @Column(name = "image_size")
     private Long imageSize;
 
-    // many-to-one: content belongs to a section
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "section_id", nullable = false)
-    private Section section;
+    @Column(name = "image_filename", length = 255)
+    private String imageFilename; // original file name
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -52,12 +52,11 @@ public class Content {
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
-
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 }

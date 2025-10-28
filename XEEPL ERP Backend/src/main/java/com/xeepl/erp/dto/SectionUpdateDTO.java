@@ -4,5 +4,5 @@ import lombok.Data;
 
 @Data
 public class SectionUpdateDTO {
-    private String title;
+    private String sectionName;
 }
