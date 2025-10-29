@@ -24,7 +24,7 @@ public class FileUploadUtil {
 
         System.out.println("Saving file to: " + filePath.toAbsolutePath());
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-        return subDir + "/" + filename; // This will be stored in DB imagePath
+        return subDir + "/" + filename; // Return relative path for DB storage
     }
 
     public void deleteFile(String relativePath) {
