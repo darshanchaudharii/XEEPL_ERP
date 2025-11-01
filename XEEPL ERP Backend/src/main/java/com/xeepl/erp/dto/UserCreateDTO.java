@@ -10,4 +10,5 @@ public class UserCreateDTO {
     private String password;
     private String mobile;
     private UserRole role;
+    private String profilePhotoUrl;
 }

@@ -26,7 +26,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final FileUploadUtil fileUploadUtil;
-    // You can modify this constant as requirements change
+
     private static final long MAX_PROFILE_PHOTO_SIZE = 512 * 1024; // 512 KB
 
     public List<UserDTO> getAllUsers(Optional<UserRole> role) {
@@ -47,41 +47,50 @@ public class UserService {
         User user = new User();
         user.setFullName(dto.getFullName());
         user.setUsername(dto.getUsername());
-        user.setPassword(dto.getPassword()); // In prod: encrypt!
+        user.setPassword(dto.getPassword()); // TODO: encrypt password in production
         user.setMobile(dto.getMobile());
         user.setRole(dto.getRole());
+
         if (profilePhoto != null && !profilePhoto.isEmpty()) {
             fileUploadUtil.validateImageFile(profilePhoto, MAX_PROFILE_PHOTO_SIZE);
             String photoPath = fileUploadUtil.saveFile(profilePhoto, "profiles");
             user.setProfilePhoto(photoPath);
         }
-        return userMapper.toDto(userRepository.save(user));
+
+        User savedUser = userRepository.save(user);
+        return userMapper.toDto(savedUser);
     }
 
     public UserDTO updateUser(Long id, UserUpdateDTO dto, MultipartFile profilePhoto) throws IOException {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+
         user.setFullName(dto.getFullName());
+
         if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
-            user.setPassword(dto.getPassword());
+            user.setPassword(dto.getPassword()); // TODO: encrypt password
         }
+
         user.setMobile(dto.getMobile());
         user.setRole(dto.getRole());
+
         if (profilePhoto != null && !profilePhoto.isEmpty()) {
             fileUploadUtil.validateImageFile(profilePhoto, MAX_PROFILE_PHOTO_SIZE);
-            if (user.getProfilePhoto() != null) {
+            if (user.getProfilePhoto() != null && !user.getProfilePhoto().isEmpty()) {
                 fileUploadUtil.deleteFile(user.getProfilePhoto());
             }
             String photoPath = fileUploadUtil.saveFile(profilePhoto, "profiles");
             user.setProfilePhoto(photoPath);
         }
-        return userMapper.toDto(userRepository.save(user));
+
+        User savedUser = userRepository.save(user);
+        return userMapper.toDto(savedUser);
     }
 
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
-        if (user.getProfilePhoto() != null) {
+        if (user.getProfilePhoto() != null && !user.getProfilePhoto().isEmpty()) {
             fileUploadUtil.deleteFile(user.getProfilePhoto());
         }
         userRepository.delete(user);

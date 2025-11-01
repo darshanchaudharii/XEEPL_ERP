@@ -1,5 +1,6 @@
 package com.xeepl.erp.entity;
 
+import com.xeepl.erp.entity.UserRole;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -12,7 +13,7 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "full_name", nullable = false)
     private String fullName;
 
     @Column(nullable = false, unique = true)
@@ -27,7 +28,7 @@ public class User {
     @Column(nullable = false)
     private UserRole role;
 
-    private String profilePhoto; // Stores the relative file path
+    private String profilePhoto; // File name or relative path
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
