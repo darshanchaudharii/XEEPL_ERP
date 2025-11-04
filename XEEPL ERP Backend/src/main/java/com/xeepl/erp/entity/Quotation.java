@@ -34,13 +34,6 @@ public class Quotation {
     @OneToMany(mappedBy = "quotation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<QuotationLine> items = new ArrayList<>();
 
-
-
-
-
-
-
-
     @ManyToMany
     @JoinTable(
             name = "quotation_catalog",

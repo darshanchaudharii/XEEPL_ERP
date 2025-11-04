@@ -10,4 +10,8 @@ public class ContentUpdateDTO {
     private String description;
     private String altTag;
     private String link;
+    private String imagePath;
+    private String imageType;
+    private Long imageSize;
+    private String imageFilename;
 }

@@ -54,7 +54,7 @@ public class QuotationService {
 
         // Save lines
         List<QuotationLine> lines = new ArrayList<>();
-        if (dto.getItems() != null) {
+        if (dto.getItems() != null && !dto.getItems().isEmpty()) {
             for (QuotationLineCreateDTO item : dto.getItems()) {
                 QuotationLine line = new QuotationLine();
                 line.setItemDescription(item.getItemDescription());
@@ -95,7 +95,7 @@ public class QuotationService {
         // Replace lines with new ones (orphanRemoval=true works)
         quotation.getItems().clear();
         List<QuotationLine> updatedLines = new ArrayList<>();
-        if (dto.getItems() != null) {
+        if (dto.getItems() != null && !dto.getItems().isEmpty()) {
             for (QuotationLineUpdateDTO item : dto.getItems()) {
                 QuotationLine line = new QuotationLine();
                 line.setItemDescription(item.getItemDescription());

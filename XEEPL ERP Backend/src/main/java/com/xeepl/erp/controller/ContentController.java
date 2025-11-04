@@ -2,6 +2,7 @@ package com.xeepl.erp.controller;
 
 import com.xeepl.erp.dto.ContentCreateDTO;
 import com.xeepl.erp.dto.ContentDTO;
+import com.xeepl.erp.dto.ContentUpdateDTO;
 import com.xeepl.erp.service.ContentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -40,6 +41,16 @@ public class ContentController {
         ContentDTO created = contentService.createContent(dto, image);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
+    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    public ResponseEntity<ContentDTO> updateContent(
+            @PathVariable Long id,
+            @RequestPart("contentDto") ContentUpdateDTO dto,
+            @RequestPart(value = "imageFile", required = false) MultipartFile imageFile
+    ) throws IOException {
+        ContentDTO updated = contentService.updateContent(id, dto, imageFile);
+        return ResponseEntity.ok(updated);
+    }
+
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteContent(@PathVariable Long id) {

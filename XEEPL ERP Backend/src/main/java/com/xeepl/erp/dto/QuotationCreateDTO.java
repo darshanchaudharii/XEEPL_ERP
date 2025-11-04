@@ -16,6 +16,5 @@ public class QuotationCreateDTO {
     @NotNull private LocalDate expiryDate;
     private Long customerId;
     private List<Long> catalogIds;
-    @NotEmpty
     private List<QuotationLineCreateDTO> items;
 }

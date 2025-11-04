@@ -1,0 +1,300 @@
+/* Quotation View Styles */
+
+.quotation-view {
+  padding: 20px;
+}
+
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e0e0e0;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.view-header .page-title {
+  margin-bottom: 0;
+}
+
+.view-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-back {
+  background-color: #3498db;
+  color: white;
+}
+
+.btn-back:hover {
+  background-color: #2980b9;
+}
+
+.btn-download-csv {
+  background-color: #27ae60;
+  color: white;
+}
+
+.btn-download-csv:hover {
+  background-color: #229954;
+}
+
+.btn-download-pdf {
+  background-color: #27ae60;
+  color: white;
+}
+
+.btn-download-pdf:hover {
+  background-color: #229954;
+}
+
+/* Quotation Summary */
+.quotation-summary {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.quotation-summary-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  color: #333;
+}
+
+.quotation-summary-line strong {
+  color: #1f8a4c;
+}
+
+/* Details Cards */
+.quotation-details-card,
+.customer-card,
+.catalogs-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.details-header,
+.customer-header,
+.catalogs-header {
+  background: linear-gradient(135deg, #1f8a4c 0%, #2ecc71 100%);
+  color: white;
+  padding: 15px 20px;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.details-body,
+.customer-body,
+.catalogs-body {
+  padding: 20px;
+}
+
+.detail-row {
+  display: flex;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #666;
+  min-width: 150px;
+}
+
+.detail-value {
+  color: #333;
+}
+
+/* Customer Section */
+.customer-info {
+  display: flex;
+  gap: 20px;
+  align-items: start;
+}
+
+.customer-photo {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #ddd;
+  flex-shrink: 0;
+}
+
+.customer-details {
+  flex: 1;
+}
+
+.customer-name {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f8a4c;
+  margin-bottom: 10px;
+}
+
+.customer-contact {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.customer-actions-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.customer-actions-group .btn {
+  flex: 1;
+}
+
+.linked-on {
+  font-size: 12px;
+  color: #999;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* Catalogs Section */
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.catalog-item {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  transition: all 0.3s;
+}
+
+.catalog-item:hover {
+  border-color: #1f8a4c;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.catalog-item-header {
+  display: flex;
+  align-items: start;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.catalog-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  flex-shrink: 0;
+}
+
+.catalog-info {
+  flex: 1;
+}
+
+.catalog-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.catalog-description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.catalog-meta {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 15px;
+}
+
+.catalog-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.catalog-actions .btn {
+  flex: 1;
+  justify-content: center;
+}
+
+/* Action Buttons Section */
+.action-buttons-section {
+  display: flex;
+  gap: 15px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.action-buttons-section .btn {
+  flex: 1;
+  min-width: 200px;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .quotation-view {
+    padding: 10px;
+  }
+  
+  .view-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .view-actions {
+    width: 100%;
+  }
+  
+  .view-actions .btn {
+    flex: 1;
+  }
+  
+  .customer-info {
+    flex-direction: column;
+  }
+  
+  .customer-photo {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .catalog-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .action-buttons-section .btn {
+    min-width: 100%;
+  }
+  
+  .detail-row {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .detail-label {
+    min-width: auto;
+  }
+}
+

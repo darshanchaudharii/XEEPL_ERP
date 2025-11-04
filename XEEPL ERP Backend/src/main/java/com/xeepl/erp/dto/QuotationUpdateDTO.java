@@ -16,7 +16,6 @@ public class QuotationUpdateDTO {
     private String status;
     private Long customerId;
     private List<Long> catalogIds;
-    @NotEmpty
     private List<QuotationLineUpdateDTO> items;
 }
 

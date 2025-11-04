@@ -16,4 +16,6 @@ public class ContentDTO {
     private String imageType;
     private Long imageSize;
     private String imageFilename;
+    private String createdOn;
+    private String updatedOn;
 }

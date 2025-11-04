@@ -1,0 +1,11 @@
+/* Section Master Specific Styles */
+
+.sectionmaster {
+  padding: 20px;
+}
+
+/* Section Master specific adjustments */
+.form-card {
+  min-height: 200px;
+}
+

@@ -2,6 +2,7 @@ package com.xeepl.erp.service;
 
 import com.xeepl.erp.dto.ContentCreateDTO;
 import com.xeepl.erp.dto.ContentDTO;
+import com.xeepl.erp.dto.ContentUpdateDTO;
 import com.xeepl.erp.entity.Content;
 import com.xeepl.erp.entity.Section;
 import com.xeepl.erp.exception.ResourceNotFoundException;
@@ -64,6 +65,47 @@ public class ContentService {
         }
 
         return contentMapper.toDto(contentRepository.save(content));
+    }
+    public ContentDTO updateContent(Long id, ContentUpdateDTO dto, MultipartFile imageFile) throws IOException {
+        Content content = contentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Content not found with id: " + id));
+
+        if(dto.getSectionId() != null) {
+            Section section = sectionRepository.findById(dto.getSectionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Section not found with id: " + dto.getSectionId()));
+            content.setSection(section);
+        }
+        content.setTitle(dto.getTitle());
+        content.setSequence(dto.getSequence());
+        content.setDescription(dto.getDescription());
+        content.setAltTag(dto.getAltTag());
+        content.setLink(dto.getLink());
+        content.setImagePath(dto.getImagePath());
+        content.setImageType(dto.getImageType());
+        content.setImageSize(dto.getImageSize());
+        content.setImageFilename(dto.getImageFilename());
+        // updatedAt auto-set via @PreUpdate
+        if (imageFile != null && !imageFile.isEmpty()) {
+            // Delete old file (if exists)
+            if (content.getImagePath() != null && !content.getImagePath().isEmpty()) {
+                fileUploadUtil.deleteFile(content.getImagePath());
+            }
+            // Save new image file
+            String imagePath = fileUploadUtil.saveFile(imageFile, "content-images");
+            content.setImagePath(imagePath);
+            content.setImageType(imageFile.getContentType());
+            content.setImageSize(imageFile.getSize());
+            content.setImageFilename(imageFile.getOriginalFilename());
+        } else {
+            // Update only metadata from DTO if provided, when no file is uploaded
+            if (dto.getImagePath() != null) content.setImagePath(dto.getImagePath());
+            if (dto.getImageType() != null) content.setImageType(dto.getImageType());
+            if (dto.getImageSize() != null) content.setImageSize(dto.getImageSize());
+            if (dto.getImageFilename() != null) content.setImageFilename(dto.getImageFilename());
+        }
+
+        Content updated = contentRepository.save(content);
+        return contentMapper.toDto(updated);
     }
 
     public void deleteContent(Long id) {

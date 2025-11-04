@@ -1,0 +1,87 @@
+/* Navbar Styles */
+
+.navbar {
+  background: linear-gradient(135deg, #1f8a4c 0%, #2ecc71 100%);
+  color: white;
+  padding: 15px 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar-brand {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.navbar-brand a {
+  color: white;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.navbar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.navbar-menu li {
+  margin: 0;
+}
+
+.navbar-menu a {
+  color: white;
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+  display: block;
+  font-weight: 500;
+}
+
+.navbar-menu a:hover,
+.navbar-menu a.active {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.navbar-menu a.logout {
+  background-color: rgba(231, 76, 60, 0.8);
+  margin-left: auto;
+}
+
+.navbar-menu a.logout:hover {
+  background-color: rgba(231, 76, 60, 1);
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 15px;
+  }
+  
+  .navbar-brand {
+    margin-bottom: 10px;
+  }
+  
+  .navbar-menu {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .navbar-menu li {
+    width: 100%;
+  }
+  
+  .navbar-menu a {
+    width: 100%;
+  }
+  
+  .navbar-menu a.logout {
+    margin-left: 0;
+  }
+}
+

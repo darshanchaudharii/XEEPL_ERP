@@ -1,0 +1,79 @@
+/* Quotation Master Specific Styles */
+
+.quotationmaster {
+  padding: 20px;
+}
+
+/* Filter Bar */
+.search-filter-bar {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.search-filter-bar .search-input,
+.search-filter-bar .filter-select,
+.search-filter-bar .date-input {
+  flex: 1;
+  min-width: 150px;
+}
+
+.search-filter-bar .clear-btn {
+  white-space: nowrap;
+}
+
+.filter-tip {
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+  margin-top: 5px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .search-filter-bar {
+    flex-direction: column;
+  }
+  
+  .search-filter-bar .search-input,
+  .search-filter-bar .filter-select,
+  .search-filter-bar .date-input {
+    width: 100%;
+  }
+  
+  .search-filter-bar .clear-btn {
+    width: 100%;
+  }
+}
+
+/* Status Badges */
+.status-badge.draft {
+  background-color: #ffe5e5;
+  color: #e74c3c;
+}
+
+.status-badge.sent {
+  background-color: #e3f2fd;
+  color: #2980b9;
+}
+
+.status-badge.approved {
+  background-color: #d5f4e6;
+  color: #27ae60;
+}
+
+.status-badge.rejected {
+  background-color: #ffe5e5;
+  color: #e74c3c;
+}
+
+.status-badge.finalized {
+  background-color: #d5f4e6;
+  color: #27ae60;
+}
+

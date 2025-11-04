@@ -1,0 +1,40 @@
+/* Item Master Specific Styles */
+
+.itemmaster {
+  padding: 20px;
+}
+
+/* Item Category Selection */
+.category-select-hint {
+  font-size: 12px;
+  color: #666;
+  margin-top: 5px;
+  font-style: italic;
+}
+
+/* Subcategory dropdown */
+.subcategory-select {
+  margin-top: 10px;
+}
+
+/* Supplier selection */
+.supplier-select {
+  margin-top: 10px;
+}
+
+/* Form row adjustments */
+.item-form-row {
+  display: flex;
+  gap: 15px;
+}
+
+.item-form-row .form-group {
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .item-form-row {
+    flex-direction: column;
+  }
+}
+

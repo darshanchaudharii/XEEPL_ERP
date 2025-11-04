@@ -1,0 +1,33 @@
+/* Content Master Specific Styles */
+.container{
+padding: 20px;
+}
+/* Image Upload Specific Styles */
+.image-upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.image-preview-small {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+/* Section Select with Search */
+.section-select-search {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.section-select-search:focus {
+  outline: none;
+  border-color: #1f8a4c;
+}
+

@@ -22,6 +22,8 @@ public class ContentMapper {
         dto.setImageType(content.getImageType());
         dto.setImageSize(content.getImageSize());
         dto.setImageFilename(content.getImageFilename());
+        dto.setCreatedOn(content.getCreatedAt() == null ? null : content.getCreatedAt().toString());
+        dto.setUpdatedOn(content.getUpdatedAt() == null ? null : content.getUpdatedAt().toString());
         return dto;
     }
 }

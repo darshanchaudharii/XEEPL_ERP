@@ -5,5 +5,6 @@ public enum UserRole {
     Customer,
     Staff,
     Supplier,
-    Manager
+    Manager,
+    Welder
 }
