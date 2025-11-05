@@ -51,72 +51,13 @@
 
 ## 🏗️ Architecture
 
-┌─────────────────────────────────────────────────────────────────┐
-│ │
-│ XEEPL ERP System │
-│ │
-└─────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────┐
-│ React Frontend │
-│ (Port 5173) │
-│ │
-│ - CatalogMaster │
-│ - ItemMaster │
-│ - MakeQuotation │
-│ - UserMaster │
-│ - RawMaterialMaster │
-│ │
-└────────────┬────────────┘
-│
-│ HTTP/REST
-│ JSON/Multipart
-│
-▼
-┌─────────────────────────┐
-│ Spring Boot Backend │
-│ (Port 8080) │
-│ │
-│ - REST Controllers │
-│ - Business Logic │
-│ - File Upload Handler │
-│ - PDF Generation │
-│ │
-└────────────┬────────────┘
-│
-│ JDBC
-│ JPA/Hibernate
-│
-▼
-┌─────────────────────────┐
-│ MySQL Database │
-│ (Port 3306) │
-│ │
-│ - users │
-│ - items │
-│ - raw_materials │
-│ - catalogs │
-│ - quotations │
-│ - quotation_lines │
-│ - sections │
-│ - contents │
-│ │
-└─────────────────────────┘
 
-┌──────────────────────────────────────────────────────────────────┐
-│ │
-│ FILE STORAGE │
-│ │
-│ uploads/ │
-│ ├── catalog-files/ → Downloaded catalog PDFs │
-│ ├── user-photos/ → User profile images │
-│ └── content-images/ → Content section images │
-│ │
-└──────────────────────────────────────────────────────────────────┘
 [Browser (React @5173)] <---HTTP/REST---> [Spring Boot API @8080] <---JDBC---> [MySQL]
 |
 +-- File system (uploads/catalog-files/)
 +-- PDF generation (on-demand)
+
 
 ---
 
@@ -150,84 +91,299 @@ cd "XEEPL ERP Backend"
 cd ../xeepl-erp-frontend
 npm install
 npm run dev
+
+
 ➡️ Open: http://localhost:5173
 
-### File Storage
+🔧 Backend Setup
+Configuration (src/main/resources/application.properties)
+server.port=8080
 
-- **Uploaded files**: Stored in `uploads/catalog-files/` (catalogs), `uploads/user-photos/` (user profile images)
-- **Generated PDFs**: Created on-the-fly and streamed to the client (not stored)
-- **File download**: Served via `GET /api/catalogs/download/files/{id}`
+spring.datasource.url=jdbc:mysql://localhost:3306/xeepl_erp?useSSL=false&serverTimezone=UTC
+spring.datasource.username=xe_user
+spring.datasource.password=xe_password
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
-### Key Interactions
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
 
-1. **Frontend → Backend**: REST API calls (GET, POST, PUT, DELETE)
-2. **Backend → Database**: JPA/Hibernate for CRUD operations
-3. **Backend → File System**: Multipart file upload handling and resource streaming
-4. **PDF Generation**: Backend generates quotation PDFs dynamically based on DB data
+spring.datasource.hikari.maximum-pool-size=10
+spring.datasource.hikari.minimum-idle=5
+spring.datasource.hikari.leak-detection-threshold=60000
 
----
+app.file.upload-dir=D:/XEEPL ERP/XEEPL ERP Backend/uploads/catalog-files
 
-## Prerequisites
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=20MB
 
-Before setting up the project, ensure you have the following installed:
+Run Backend
+cd "XEEPL ERP Backend"
+./mvnw clean package
+./mvnw spring-boot:run
+# OR
+java -jar target/xeepl-erp-backend-0.0.1-SNAPSHOT.jar
 
-### Required Software
+Hikari / DB Tips
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| **Node.js** | 18.x or higher | Frontend development |
-| **Java JDK** | 17 or higher | Backend runtime |
-| **Maven** | 3.8+ | Backend build tool |
-| **MySQL** | 8.0+ | Database server |
-| **Git** | Latest | Version control |
+Adjust pool size for your environment.
 
-### Ports Used
+Use leak-detection-threshold in development.
 
-- **Frontend**: `5173` (Vite dev server)
-- **Backend**: `8080` (Spring Boot)
-- **MySQL**: `3306` (default)
+Debug with:
 
-### Environment Variables
+logging.level.com.zaxxer.hikari=DEBUG
+logging.level.org.hibernate.SQL=DEBUG
 
-Create the following environment variables or configure them in `application.properties`:
+💻 Frontend Setup
+Environment
+
+.env.local
+
+VITE_API_BASE=http://localhost:8080
+
+Install & Run
+cd xeepl-erp-frontend
+npm install
+npm run dev
+
+Dev Proxy (vite)
+export default defineConfig({
+  server: {
+    proxy: {
+      '/api': 'http://localhost:8080'
+    }
+  }
+});
 
 
-### File Storage
+Main components
 
-- **Uploaded files**: Stored in `uploads/catalog-files/` (catalogs), `uploads/user-photos/` (user profile images)
-- **Generated PDFs**: Created on-the-fly and streamed to the client (not stored)
-- **File download**: Served via `GET /api/catalogs/download/files/{id}`
+CatalogMaster.jsx
 
-### Key Interactions
+ItemMaster.jsx
 
-1. **Frontend → Backend**: REST API calls (GET, POST, PUT, DELETE)
-2. **Backend → Database**: JPA/Hibernate for CRUD operations
-3. **Backend → File System**: Multipart file upload handling and resource streaming
-4. **PDF Generation**: Backend generates quotation PDFs dynamically based on DB data
+MakeQuotation.jsx
 
----
+🗄️ Database Schema & Sample SQL
+CREATE DATABASE xeepl_erp;
+USE xeepl_erp;
 
-## Prerequisites
+CREATE TABLE users (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  full_name VARCHAR(255),
+  email VARCHAR(255),
+  role VARCHAR(50),
+  password_hash VARCHAR(255)
+);
 
-Before setting up the project, ensure you have the following installed:
+CREATE TABLE items (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  item_name VARCHAR(255),
+  item_code VARCHAR(100),
+  item_category_id INT,
+  supplier_id INT,
+  item_qty DECIMAL(12,3),
+  item_price DECIMAL(12,2),
+  description TEXT
+);
 
-### Required Software
+CREATE TABLE catalogs (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255),
+  file_name VARCHAR(500),
+  file_path VARCHAR(1000),
+  file_type VARCHAR(100),
+  file_size BIGINT,
+  description TEXT,
+  created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| **Node.js** | 18.x or higher | Frontend development |
-| **Java JDK** | 17 or higher | Backend runtime |
-| **Maven** | 3.8+ | Backend build tool |
-| **MySQL** | 8.0+ | Database server |
-| **Git** | Latest | Version control |
+CREATE TABLE quotations (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  customer_name VARCHAR(255),
+  show_raw_prices BOOLEAN DEFAULT TRUE,
+  created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-### Ports Used
+CREATE TABLE quotation_lines (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  quotation_id BIGINT NOT NULL,
+  line_type ENUM('ITEM','RAW'),
+  parent_item_id BIGINT NULL,
+  title VARCHAR(255),
+  description TEXT,
+  qty DECIMAL(12,3),
+  rate DECIMAL(12,2),
+  total DECIMAL(14,2),
+  FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE CASCADE
+);
 
-##- **Frontend**: `5173` (Vite dev server)
-##- **Backend**: `8080` (Spring Boot)
-##- **MySQL**: `3306` (default)
 
-### Environment Variables
+Example insert:
 
-## Create the following environment variables or configure them in `application.properties`:
+INSERT INTO catalogs (title, file_name, file_path, file_type, description)
+VALUES ('Sample Catalog', 'sample.pdf', 'catalog-files/sample.pdf', 'application/pdf', 'Test catalog');
 
+🌐 API Reference (key endpoints)
+
+Base URL: http://localhost:8080/api
+
+Catalogs
+Method	Endpoint	Description
+GET	/api/catalogs	Fetch all catalogs
+POST	/api/catalogs	Upload new catalog (multipart)
+GET	/api/catalogs/download/files/{id}	Download catalog file
+PUT	/api/catalogs/{id}	Update catalog
+DELETE	/api/catalogs/{id}	Delete catalog
+Items
+Method	Endpoint
+GET	/api/items
+POST	/api/items
+PUT	/api/items/{id}
+DELETE	/api/items/{id}
+Quotations
+Method	Endpoint	Description
+GET	/api/quotations/{id}	Fetch a quotation with items/raws
+POST	/api/quotations	Create quotation
+GET	/api/quotations/{id}/download	Download quotation PDF
+🧾 Make Quotation — Behavior & Rules
+
+Parent ITEM rows have bold title (16–18px) and description below.
+
+RAW material rows appear under each parent item, labeled a), b), c)....
+
+Raw rows show name, description, qty, rate, and total.
+
+Toggles:
+
+Show raw prices → hide/show rate and total for raw rows only.
+
+Show removed rows → toggle visibility of deleted items.
+
+PDF output matches exactly what’s displayed.
+
+🧠 PDF Generation
+Option 1 – Server-side (recommended)
+
+Endpoint: /api/quotations/{id}/download
+
+Uses Puppeteer or wkhtmltopdf for perfect fidelity.
+
+Returns application/pdf.
+
+Option 2 – Client-side
+
+Uses html2canvas/jsPDF from frontend.
+
+Easier to integrate but lower fidelity.
+
+For repeated headers on multi-page PDFs:
+Add thead { display: table-header-group; }
+
+🖼️ Screenshots
+
+(Store under docs/images/)
+
+Make Quotation (UI)
+
+Quotation PDF
+
+Quotation Table
+
+Catalog Master
+
+Item Master
+
+Raw Material Master
+
+User Master
+
+Quotation List
+
+Show Removed Raw Rows
+
+⚠️ Troubleshooting & FAQ
+
+Download 404 / 500?
+→ Ensure file exists in upload folder.
+→ Confirm controller mapping /download/files/{id}.
+
+CORS errors?
+Enable CORS:
+
+registry.addMapping("/api/**")
+        .allowedOrigins("http://localhost:5173")
+        .allowedMethods("*");
+
+
+Hikari warnings?
+Ignore initial “driver unknown” — it resolves after first DB query.
+
+File permissions?
+Ensure backend upload directory has read/write permissions.
+
+✅ Testing & QA
+Manual
+
+Upload a catalog
+
+Create a quotation
+
+Toggle “Show raw prices”
+
+Download PDF
+
+Verify matching layout
+
+Automated
+# Backend
+mvn test
+
+# Frontend
+npm run test
+
+🤝 Contributing
+
+Fork the repo
+
+Create feature branch git checkout -b feat/feature-name
+
+Commit and push
+
+Open a Pull Request
+
+📄 License & Contact
+
+License: MIT
+Contact: support@xeepl.com
+
+📘 Appendix: docs/SETUP-QUICK.md
+# XEEPL_ERP — Quick Setup
+
+1. Clone repo  
+   ```bash
+   git clone https://github.com/youruser/XEEPL_ERP.git
+   cd XEEPL_ERP
+
+
+Create database
+
+CREATE DATABASE xeepl_erp;
+
+
+Run backend
+
+cd "XEEPL ERP Backend"
+./mvnw spring-boot:run
+
+
+Run frontend
+
+cd ../xeepl-erp-frontend
+npm install
+npm run dev
+
+
+Visit http://localhost:5173
