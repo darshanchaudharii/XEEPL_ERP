@@ -183,13 +183,13 @@ const ItemMaster = () => {
     <div className="page-container">
       <h1 className="page-title">Item Master</h1>
 
-      {error && <ErrorMessage message={error} onClose={() => setError('')} />}
+      {error && <ErrorMessage message={error} onClose={() => setError("")} />}
 
       <div className="master-content">
         <section className="form-card">
           <div className="card-header">
             <i className="fas fa-box"></i>
-            {editingId ? 'Edit Item' : 'Add Item'}
+            {editingId ? "Edit Item" : "Add Item"}
           </div>
           <form className="card-body" onSubmit={handleSubmit}>
             <div className="form-group">
@@ -214,13 +214,16 @@ const ItemMaster = () => {
                 onChange={handleChange}
               >
                 <option value="">Select category</option>
-                {categories.map(cat => (
+                {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.title}
                   </option>
                 ))}
               </select>
-              <small>Type to search categories. (Source: contentmaster → "Item Categories")</small>
+              <small>
+                Type to search categories. (Source: contentmaster → "Item
+                Categories")
+              </small>
             </div>
 
             <div className="form-group">
@@ -231,7 +234,7 @@ const ItemMaster = () => {
                 onChange={handleChange}
               >
                 <option value="">Select sub-category</option>
-                {categories.map(cat => (
+                {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.title}
                   </option>
@@ -248,13 +251,15 @@ const ItemMaster = () => {
                 onChange={handleChange}
               >
                 <option value="">Select supplier</option>
-                {suppliers.map(sup => (
+                {suppliers.map((sup) => (
                   <option key={sup.id} value={sup.id}>
                     {sup.fullName}
                   </option>
                 ))}
               </select>
-              <small>Suppliers are pulled from usermaster where role = "Supplier".</small>
+              <small>
+                Suppliers are pulled from usermaster where role = "Supplier".
+              </small>
             </div>
 
             <div className="form-group">
@@ -291,13 +296,27 @@ const ItemMaster = () => {
                 placeholder="Item Code"
               />
             </div>
+            <div className="form-group">
+              <label>Description</label>
+              <textarea
+                name="description"
+                value={form.description}
+                onChange={handleChange}
+                placeholder="Enter item description"
+                rows={3}
+              />
+            </div>
 
             <div className="form-actions">
               <button type="submit" className="btn btn-save" disabled={loading}>
                 <i className="fas fa-save"></i>
-                {editingId ? 'Update' : 'Save'}
+                {editingId ? "Update" : "Save"}
               </button>
-              <button type="button" className="btn btn-cancel" onClick={resetForm}>
+              <button
+                type="button"
+                className="btn btn-cancel"
+                onClick={resetForm}
+              >
                 <i className="fas fa-times"></i>
                 Clear
               </button>
@@ -341,22 +360,24 @@ const ItemMaster = () => {
                 <tbody>
                   {filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan="10" className="no-data">No items found</td>
+                      <td colSpan="10" className="no-data">
+                        No items found
+                      </td>
                     </tr>
                   ) : (
-                    filteredItems.map(item => (
+                    filteredItems.map((item) => (
                       <tr key={item.id}>
                         <td>{item.id}</td>
                         <td>{item.itemName}</td>
-                        <td>{item.itemCategoryName || '—'}</td>
-                        <td>{item.itemSubcategoryName || '—'}</td>
-                        <td>{item.supplierName || '—'}</td>
+                        <td>{item.itemCategoryName || "—"}</td>
+                        <td>{item.itemSubcategoryName || "—"}</td>
+                        <td>{item.supplierName || "—"}</td>
                         <td>{item.itemQty || 0}</td>
                         <td>{item.itemPrice || 0}</td>
-                        <td>{item.itemCode || '—'}</td>
+                        <td>{item.itemCode || "—"}</td>
                         <td>
-                          <button 
-                            className="btn btn-edit" 
+                          <button
+                            className="btn btn-edit"
                             onClick={() => handleEdit(item)}
                           >
                             <i className="fas fa-edit"></i>
@@ -364,8 +385,8 @@ const ItemMaster = () => {
                           </button>
                         </td>
                         <td>
-                          <button 
-                            className="btn btn-delete" 
+                          <button
+                            className="btn btn-delete"
                             onClick={() => openDeleteModal(item.id)}
                           >
                             <i className="fas fa-trash"></i>

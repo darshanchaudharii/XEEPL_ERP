@@ -4,11 +4,17 @@ import com.xeepl.erp.dto.*;
 import com.xeepl.erp.entity.*;
 import com.xeepl.erp.mapper.QuotationMapper;
 import com.xeepl.erp.repository.*;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Service
 @RequiredArgsConstructor
@@ -18,7 +24,6 @@ public class QuotationService {
     private final UserRepository userRepository;
     private final CatalogRepository catalogRepository;
     private final QuotationMapper quotationMapper;
-    private final PdfExportService pdfExportService;
 
     // List all quotations
     public List<QuotationDTO> listQuotations() {
@@ -70,6 +75,38 @@ public class QuotationService {
         Quotation saved = quotationRepository.save(quotation);
         return quotationMapper.toDto(saved);
     }
+    public QuotationDTO linkCatalogsToQuotation(Long quotationId, List<Long> catalogIds) {
+        Quotation quotation = quotationRepository.findById(quotationId)
+                .orElseThrow(() -> new RuntimeException("Quotation not found"));
+
+        List<Catalog> catalogs = catalogRepository.findAllById(catalogIds);
+        quotation.setLinkedCatalogs(catalogs);
+
+        Quotation saved = quotationRepository.save(quotation);
+        return quotationMapper.toDto(saved);
+    }
+    // download linked catalogs as ZIP
+
+    public void downloadCatalogsAsZip(Long quotationId, HttpServletResponse response) throws IOException {
+        Quotation quotation = quotationRepository.findById(quotationId)
+                .orElseThrow(() -> new RuntimeException("Quotation not found"));
+
+        response.setContentType("application/zip");
+        response.setHeader("Content-Disposition",
+                "attachment; filename=quotation_" + quotationId + "_catalogs.zip");
+
+        try (ZipOutputStream zos = new ZipOutputStream(response.getOutputStream())) {
+            for (Catalog catalog : quotation.getLinkedCatalogs()) {
+                File file = new File("uploads/" + catalog.getFilePath());
+                if (file.exists()) {
+                    ZipEntry entry = new ZipEntry(catalog.getFileName());
+                    zos.putNextEntry(entry);
+                    Files.copy(file.toPath(), zos);
+                    zos.closeEntry();
+                }
+            }
+        }
+    }
 
     // Update an existing quotation
     public QuotationDTO updateQuotation(Long id, QuotationUpdateDTO dto) {
@@ -112,15 +149,9 @@ public class QuotationService {
         return quotationMapper.toDto(saved);
     }
 
+
     // Delete a quotation by ID
     public void deleteQuotation(Long id) {
         quotationRepository.deleteById(id);
-    }
-
-    // Export PDF for a quotation
-    public byte[] exportQuotationPdf(Long id) {
-        Quotation quotation = quotationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Quotation not found"));
-        return pdfExportService.exportQuotationPdf(quotation);
     }
 }

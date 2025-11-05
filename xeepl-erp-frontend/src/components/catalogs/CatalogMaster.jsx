@@ -29,9 +29,9 @@ const CatalogMaster = () => {
     setError('');
     try {
       const data = await catalogService.getAllCatalogs();
-      setCatalogs(data);
+      setCatalogs(data || []);
     } catch (err) {
-      setError('Failed to fetch catalogs: ' + err.message);
+      setError('Failed to fetch catalogs: ' + (err.message || err));
     } finally {
       setLoading(false);
     }
@@ -108,7 +108,7 @@ const CatalogMaster = () => {
       await fetchCatalogs();
       resetForm();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
@@ -142,20 +142,11 @@ const CatalogMaster = () => {
       await fetchCatalogs();
       closeDeleteModal();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Failed to delete catalog');
     } finally {
       setLoading(false);
     }
   };
-
-  const handleDownload = async (catalog) => {
-    try {
-      await catalogService.downloadCatalogFile(catalog);
-    } catch (err) {
-      setError('Failed to download file: ' + err.message);
-    }
-  };
-
   return (
     <div className="page-container">
       <h1 className="page-title">Catalog Master</h1>
@@ -262,24 +253,36 @@ const CatalogMaster = () => {
                         <td>{catalog.id}</td>
                         <td>{catalog.title}</td>
                         <td>
-                          <button 
+                          {/* Prefer direct backend URL if you want browser-native open (works without auth).
+                              Use programmatic download (below) if you need to attach auth header or force save. */}
+                          <a
+                            href={`/api/catalogs/download/files/${catalog.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="btn btn-download"
-                            onClick={() => handleDownload(catalog)}
                           >
-                            <i className="fas fa-download"></i>
-                            Download
+                            <i className="fas fa-download"></i> Download
+                          </a>
+
+                          {/* Example for programmatic download (uncomment if you prefer):
+                          <button
+                            className="btn btn-download"
+                            onClick={() => downloadCatalogFile(catalog.id, catalog.fileName)}
+                          >
+                            <i className="fas fa-download"></i> Download
                           </button>
+                          */}
                         </td>
                         <td>{catalog.description}</td>
                         <td>
-                          {catalog.createdOn 
+                          {catalog.createdOn
                             ? new Date(catalog.createdOn).toLocaleDateString()
                             : '—'
                           }
                         </td>
                         <td>
-                          <button 
-                            className="btn btn-edit" 
+                          <button
+                            className="btn btn-edit"
                             onClick={() => handleEdit(catalog)}
                           >
                             <i className="fas fa-edit"></i>
@@ -287,8 +290,8 @@ const CatalogMaster = () => {
                           </button>
                         </td>
                         <td>
-                          <button 
-                            className="btn btn-delete" 
+                          <button
+                            className="btn btn-delete"
                             onClick={() => openDeleteModal(catalog.id)}
                           >
                             <i className="fas fa-trash"></i>

@@ -1,22 +1,30 @@
 package com.xeepl.erp.controller;
-
+import com.xeepl.erp.entity.Catalog;
+import  com.xeepl.erp.repository.CatalogRepository;
+import com.xeepl.erp.exception.ResourceNotFoundException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xeepl.erp.dto.CatalogCreateDTO;
 import com.xeepl.erp.dto.CatalogDTO;
 import com.xeepl.erp.dto.CatalogUpdateDTO;
 import com.xeepl.erp.service.CatalogService;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.*;
-import java.nio.file.Files;
+import java.util.List;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
+
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/catalogs")
@@ -24,6 +32,7 @@ import java.util.List;
 public class CatalogController {
 
     private final CatalogService catalogService;
+    private final CatalogRepository catalogRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @GetMapping
@@ -65,23 +74,33 @@ public class CatalogController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/download/{filename}")
-    public void downloadFile(@PathVariable String filename, HttpServletResponse response) throws IOException {
-        Path file = Paths.get("uploads/catalog-files", filename);
-        if (Files.exists(file)) {
-            response.setContentType(Files.probeContentType(file));
-            response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
-            try (InputStream in = Files.newInputStream(file);
-                 OutputStream out = response.getOutputStream()) {
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-                while ((bytesRead = in.read(buffer)) != -1) {
-                    out.write(buffer, 0, bytesRead);
-                }
-                out.flush();
-            }
-        } else {
-            response.sendError(404, "File not found");
+    @GetMapping("/download/files/{id}")
+    public ResponseEntity<Resource> downloadCatalogFile(@PathVariable Long id) throws Exception {
+        Catalog catalog = catalogRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Catalog not found with id: " + id));
+
+        // Use the absolute file path directly for testing
+        // To make it robust, you could use catalog.getFilePath() if it stores the full absolute path, or prepend as shown below.
+        String absoluteFilePath = "D:/XEEPL ERP/XEEPL ERP Backend/uploads/" + catalog.getFilePath().replace("\\", "/");
+        Path filePath = Paths.get(absoluteFilePath).normalize();
+
+        System.out.println("Resolved file path: " + filePath.toAbsolutePath()); // Debug print
+
+        Resource resource = new UrlResource(filePath.toUri());
+
+        if (!resource.exists()) {
+            throw new RuntimeException("File not found: " + catalog.getFileName());
         }
+
+        String contentType = catalog.getFileType();
+        if (contentType == null) {
+            contentType = "application/octet-stream";
+        }
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + catalog.getFileName() + "\"")
+                .body(resource);
     }
+
 }

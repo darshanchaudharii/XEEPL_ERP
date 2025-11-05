@@ -9,6 +9,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import Modal from '../common/Modal';
 import '../../styles/makequotation.css';
+import { downloadQuotationPDF } from '../../utils/pdfGenerator'; 
 
 const MakeQuotation = () => {
   const navigate = useNavigate();
@@ -36,6 +37,40 @@ const MakeQuotation = () => {
   const [activeTab, setActiveTab] = useState('items');
   const [catalogModalOpen, setCatalogModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [catalogFilter, setCatalogFilter] = useState('');
+const [removedLines, setRemovedLines] = useState([]);
+const handleRemoveLine = (lineId) => {
+  const lineToRemove = quotationLines.find(line => line.id === lineId);
+  if (lineToRemove) {
+    setRemovedLines(prev => [...prev, { ...lineToRemove, removedAt: Date.now() }]);
+    setQuotationLines(prev => prev.filter(line => line.id !== lineId));
+  }
+};
+const handleUndoRemove = (lineId) => {
+  const lineToRestore = removedLines.find(line => line.id === lineId);
+  if (lineToRestore) {
+    const restoredLine = { ...lineToRestore };
+    setQuotationLines(prev => [...prev, restoredLine]);
+    setRemovedLines(prev => prev.filter(line => line.id !== lineId));
+  }
+};
+// Add this handler function near other handlers
+const handleDecrementQuantity = (lineId) => {
+  setQuotationLines(prev => {
+    const updated = prev.map(line => {
+      if (line.id === lineId && line.quantity > 1) {
+        const newQuantity = line.quantity - 1;
+        return {
+          ...line,
+          quantity: newQuantity,
+          total: newQuantity * line.unitPrice
+        };
+      }
+      return line;
+    });
+    return updated;
+  });
+};
 
   useEffect(() => {
     fetchInitialData();
@@ -62,13 +97,18 @@ const MakeQuotation = () => {
   const fetchInitialData = async () => {
     setLoading(true);
     try {
-      const [quotationsData, customersData, itemsData, rawMaterialsData, catalogsData] = await Promise.all([
+      const [quotationsData, allUsersData, itemsData, rawMaterialsData, catalogsData] = await Promise.all([
         quotationService.getAllQuotations(),
-        userService.getAllUsers('Customer'),
+        userService.getAllUsers(), // Fetch all users, filter on frontend
         itemService.getAllItems(),
         rawMaterialService.getAllRawMaterials(),
         catalogService.getAllCatalogs()
       ]);
+      
+      // Filter customers from all users on frontend
+      const customersData = Array.isArray(allUsersData) 
+        ? allUsersData.filter(user => user.role === 'Customer' || user.role === 'CUSTOMER')
+        : [];
       
       setQuotations(quotationsData);
       setCustomers(customersData);
@@ -78,6 +118,7 @@ const MakeQuotation = () => {
       setCatalogs(catalogsData);
     } catch (err) {
       setError('Failed to load data: ' + err.message);
+      console.error('Fetch error:', err);
     } finally {
       setLoading(false);
     }
@@ -155,16 +196,36 @@ const MakeQuotation = () => {
     const item = items.find(i => i.id === Number(selectedItem));
     if (!item) return;
 
-    const newLine = {
-      id: Date.now(),
-      itemDescription: item.itemName,
-      quantity: Number(itemQty),
-      unitPrice: Number(itemRate) || Number(item.itemPrice) || 0,
-      total: 0
-    };
-    newLine.total = newLine.quantity * newLine.unitPrice;
+    // Check if item already exists (by stable itemId)
+    const existingLineIndex = quotationLines.findIndex(
+      line => !line.isRawMaterial && line.itemId === item.id
+    );
 
-    setQuotationLines(prev => [...prev, newLine]);
+    if (existingLineIndex !== -1) {
+      // Increment quantity
+      setQuotationLines(prev => {
+        const updated = [...prev];
+        updated[existingLineIndex].quantity += Number(itemQty);
+        updated[existingLineIndex].total = 
+          updated[existingLineIndex].quantity * updated[existingLineIndex].unitPrice;
+        return updated;
+      });
+    } else {
+      // Add new line
+      const newLine = {
+        id: Date.now(),
+        itemId: item.id,
+        itemDescription: item.itemName,
+        itemLongDescription: item.itemDescription || item.description || '',
+        quantity: Number(itemQty),
+        unitPrice: Number(itemRate) || Number(item.itemPrice) || 0,
+        total: 0,
+        isRawMaterial: false
+      };
+      newLine.total = newLine.quantity * newLine.unitPrice;
+      setQuotationLines(prev => [...prev, newLine]);
+    }
+
     setSelectedItem('');
     setItemQty(1);
     setItemRate('');
@@ -179,23 +240,41 @@ const MakeQuotation = () => {
     const raw = rawMaterials.find(r => r.id === Number(selectedRawMaterial));
     if (!raw) return;
 
-    const newLine = {
-      id: Date.now(),
-      itemDescription: `${raw.name} (Raw Material)`,
-      quantity: Number(rawQty),
-      unitPrice: Number(rawRate) || Number(raw.price) || 0,
-      total: 0
-    };
-    newLine.total = newLine.quantity * newLine.unitPrice;
+    // Attach to the most recently added ITEM row (parent)
+    const lastItem = [...quotationLines].reverse().find(l => !l.isRawMaterial);
+    const parentItemId = lastItem ? lastItem.id : null;
 
-    setQuotationLines(prev => [...prev, newLine]);
+    const description = `${raw.name} (Raw Material)`;
+    const existingLineIndex = quotationLines.findIndex(
+      line => line.isRawMaterial && line.rawId === raw.id && line.parentItemId === parentItemId
+    );
+
+    if (existingLineIndex !== -1) {
+      setQuotationLines(prev => {
+        const updated = [...prev];
+        updated[existingLineIndex].quantity += Number(rawQty);
+        updated[existingLineIndex].total = 
+          updated[existingLineIndex].quantity * updated[existingLineIndex].unitPrice;
+        return updated;
+      });
+    } else {
+      const newLine = {
+        id: Date.now(),
+        rawId: raw.id,
+        itemDescription: description,
+        quantity: Number(rawQty),
+        unitPrice: Number(rawRate) || Number(raw.price) || 0,
+        total: 0,
+        isRawMaterial: true,
+        parentItemId
+      };
+      newLine.total = newLine.quantity * newLine.unitPrice;
+      setQuotationLines(prev => [...prev, newLine]);
+    }
+
     setSelectedRawMaterial('');
     setRawQty(1);
     setRawRate('');
-  };
-
-  const handleRemoveLine = (lineId) => {
-    setQuotationLines(prev => prev.filter(line => line.id !== lineId));
   };
 
   const handleCatalogToggle = (catalogId) => {
@@ -241,25 +320,31 @@ const MakeQuotation = () => {
     }
   };
 
-  const handleDownloadPDF = async () => {
-    if (!quotationId) {
-      setError('Please select a quotation');
-      return;
-    }
+const handleDownloadPDF = async () => {
+  if (!quotationId) {
+    setError('Please select a quotation');
+    return;
+  }
 
-    try {
-      await quotationService.exportQuotationPDF(quotationId);
-    } catch (err) {
-      setError('Failed to download PDF: ' + err.message);
-    }
-  };
+  try {
+    setLoading(true);
+    const quotation = await quotationService.getQuotationById(quotationId);
+    await downloadQuotationPDF(quotation, quotationLines, { showRawPrices });
+  } catch (err) {
+    setError('Failed to generate PDF: ' + err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleRefresh = () => {
     fetchInitialData();
   };
 
   const calculateGrandTotal = () => {
-    return quotationLines.reduce((sum, line) => sum + Number(line.total), 0);
+    return quotationLines
+      .filter(line => !line.isRawMaterial)
+      .reduce((sum, line) => sum + Number(line.total), 0);
   };
 
   const selectedCustomer = customers.find(c => c.id === Number(customerId));
@@ -581,30 +666,132 @@ const MakeQuotation = () => {
                       </td>
                     </tr>
                   ) : (
-                    quotationLines
-                      .filter(line => {
-                        if (!searchQuery.trim()) return true;
-                        const query = searchQuery.toLowerCase();
-                        return line.itemDescription.toLowerCase().includes(query);
-                      })
-                      .map((line, index) => (
-                        <tr key={line.id}>
-                          <td>{index + 1}</td>
-                          <td>{line.itemDescription}</td>
-                          <td>{line.quantity}</td>
-                          <td>₹{Number(line.unitPrice).toFixed(2)}</td>
-                          <td>₹{Number(line.total || (line.quantity * line.unitPrice)).toFixed(2)}</td>
+                    <>
+                      {quotationLines
+                        .filter(l => !l.isRawMaterial) // only items for main rows
+                        .filter(line => {
+                          if (!searchQuery.trim()) return true;
+                          const query = searchQuery.toLowerCase();
+                          return line.itemDescription.toLowerCase().includes(query);
+                        })
+                        .map((line, index) => (
+                          <React.Fragment key={line.id}>
+                            <tr>
+                              <td>{index + 1}</td>
+                              <td>
+                                <div>
+                                  <strong>{line.itemDescription}</strong>
+                                  <div style={{ fontSize: '12px', color: '#555', marginTop: 4 }}>
+                                    {line.itemLongDescription || (items.find(i => i.id === line.itemId || i.itemName === line.itemDescription)?.itemDescription) || ''}
+                                  </div>
+                                </div>
+                              </td>
+                              <td>{line.quantity}</td>
+                              <td>₹{Number(line.unitPrice).toFixed(2)}</td>
+                              <td>₹{Number(line.total || (line.quantity * line.unitPrice)).toFixed(2)}</td>
+                              <td>
+                                {line.quantity > 1 ? (
+                                  <div style={{ display: 'flex', gap: '5px' }}>
+                                    <button 
+                                      className="btn btn-remove"
+                                      onClick={() => handleDecrementQuantity(line.id)}
+                                      title="Remove one item"
+                                    >
+                                      <i className="fas fa-minus"></i>
+                                    </button>
+                                    <button 
+                                      className="btn btn-delete"
+                                      onClick={() => handleRemoveLine(line.id)}
+                                      title="Remove all"
+                                    >
+                                      <i className="fas fa-trash"></i>
+                                      All
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button 
+                                    className="btn btn-remove"
+                                    onClick={() => handleRemoveLine(line.id)}
+                                    title="Remove item"
+                                  >
+                                    <i className="fas fa-trash"></i>
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                            {
+                              quotationLines
+                                .filter(raw => raw.isRawMaterial && raw.parentItemId === line.id)
+                                .map((raw, rawIndex) => (
+                                  <tr key={raw.id}>
+                                    <td></td>
+                                    <td style={{ paddingLeft: 24 }}>
+                                      {String.fromCharCode(97 + rawIndex)}) {raw.itemDescription}
+                                    </td>
+                                    <td>{raw.quantity}</td>
+                                    <td>
+                                      {showRawPrices ? `₹${Number(raw.unitPrice).toFixed(2)}` : '—'}
+                                    </td>
+                                    <td>—</td>
+                                    <td>
+                                      {raw.quantity > 1 ? (
+                                        <div style={{ display: 'flex', gap: '5px' }}>
+                                          <button
+                                            className="btn btn-remove"
+                                            onClick={() => handleDecrementQuantity(raw.id)}
+                                            title="Remove one raw"
+                                          >
+                                            <i className="fas fa-minus"></i>
+                                          </button>
+                                          <button
+                                            className="btn btn-delete"
+                                            onClick={() => handleRemoveLine(raw.id)}
+                                            title="Remove all"
+                                          >
+                                            <i className="fas fa-trash"></i>
+                                            All
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          className="btn btn-remove"
+                                          onClick={() => handleRemoveLine(raw.id)}
+                                          title="Remove raw"
+                                        >
+                                          <i className="fas fa-trash"></i>
+                                        </button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))
+                            }
+                          </React.Fragment>
+                        ))}
+
+                      {showRemovedRaws && removedLines.length > 0 && removedLines.map((line, idx) => (
+                        <tr key={`removed-${line.id}`} style={{ backgroundColor: '#ffe5e5', opacity: 0.9 }}>
+                          <td>{quotationLines.length + idx + 1}</td>
+                          <td>
+                            <s>{line.itemDescription}</s>
+                            <span style={{ color: '#e74c3c', marginLeft: 10 }}>(Removed)</span>
+                          </td>
+                          <td><s>{line.quantity}</s></td>
+                          <td><s>₹{Number(line.unitPrice).toFixed(2)}</s></td>
+                          <td><s>₹{Number(line.total || (line.quantity * line.unitPrice)).toFixed(2)}</s></td>
                           <td>
                             <button 
-                              className="btn btn-remove"
-                              onClick={() => handleRemoveLine(line.id)}
-                              title="Remove item"
+                              className="btn btn-undo"
+                              onClick={() => handleUndoRemove(line.id)}
+                              title="Undo remove"
+                              style={{ backgroundColor: '#f39c12', color: 'white' }}
                             >
-                              <i className="fas fa-trash"></i>
+                              <i className="fas fa-undo"></i>
+                              Undo
                             </button>
                           </td>
                         </tr>
-                      ))
+                      ))}
+                    </>
                   )}
                   <tr className="grand-total-row">
                     <td colSpan="4" className="grand-total-label">
@@ -630,39 +817,117 @@ const MakeQuotation = () => {
       {/* Catalog Modal */}
       <Modal
         isOpen={catalogModalOpen}
-        onClose={() => setCatalogModalOpen(false)}
-        title="Manage Linked Catalogs"
+        onClose={() => {
+          setCatalogModalOpen(false);
+          setCatalogFilter('');
+        }}
+        title="Link Quotation to Catalog(s)"
         size="large"
       >
         <div className="catalog-modal-content">
+          <p className="modal-instruction">
+            Select one or more catalogs to link with this quotation.
+          </p>
+          <div className="catalog-filter-section">
+            <input
+              type="text"
+              placeholder="-- Filter by catalog --"
+              className="catalog-filter-input"
+              value={catalogFilter}
+              onChange={(e) => setCatalogFilter(e.target.value)}
+            />
+            <button
+              className="btn btn-clear"
+              onClick={() => setCatalogFilter('')}
+            >
+              Clear
+            </button>
+          </div>
           <div className="catalog-list">
-            {catalogs.map(catalog => (
-              <div key={catalog.id} className="catalog-item">
-                <label className="toggle-label">
-                  <input
-                    type="checkbox"
-                    checked={selectedCatalogs.includes(catalog.id)}
-                    onChange={() => handleCatalogToggle(catalog.id)}
-                  />
-                  <div className="catalog-info">
-                    <strong>{catalog.name}</strong>
-                    <span className="catalog-meta">
-                      {catalog.itemCount || 0} items
-                    </span>
-                  </div>
-                </label>
-              </div>
-            ))}
+            {catalogs
+              .filter(catalog => {
+                if (!catalogFilter.trim()) return true;
+                const query = catalogFilter.toLowerCase();
+                const catalogName = (catalog.name || catalog.title || '').toLowerCase();
+                const catalogDesc = (catalog.description || '').toLowerCase();
+                return catalogName.includes(query) || catalogDesc.includes(query);
+              })
+              .map(catalog => (
+                <div key={catalog.id} className="catalog-item">
+                  <label className="toggle-label">
+                    <input
+                      type="checkbox"
+                      checked={selectedCatalogs.includes(catalog.id)}
+                      onChange={() => handleCatalogToggle(catalog.id)}
+                    />
+                    <div className="catalog-info">
+                      <strong>{catalog.name || catalog.title}</strong>
+                      {catalog.description && (
+                        <p className="catalog-description">{catalog.description}</p>
+                      )}
+                      <span className="catalog-meta">
+                        Catalog ID: {catalog.id}
+                      </span>
+                    </div>
+                  </label>
+                </div>
+              ))}
+            {catalogs.filter(catalog => {
+              if (!catalogFilter.trim()) return false;
+              const query = catalogFilter.toLowerCase();
+              const catalogName = (catalog.name || catalog.title || '').toLowerCase();
+              const catalogDesc = (catalog.description || '').toLowerCase();
+              return catalogName.includes(query) || catalogDesc.includes(query);
+            }).length === 0 && catalogs.length > 0 && (
+              <p className="no-catalogs">No catalogs match the filter</p>
+            )}
             {catalogs.length === 0 && (
               <p className="no-catalogs">No catalogs available</p>
             )}
           </div>
+          <p className="modal-help-text">
+            You can also use the filter above to quickly find a catalog. Checked items will be linked.
+          </p>
           <div className="modal-actions">
             <button 
-              className="btn btn-save"
-              onClick={() => setCatalogModalOpen(false)}
+              className="btn btn-cancel"
+              onClick={() => {
+                setCatalogModalOpen(false);
+                setCatalogFilter('');
+              }}
             >
-              Done
+              Cancel
+            </button>
+            <button 
+              className="btn btn-save"
+              onClick={async () => {
+                if (!quotationId) {
+                  setError('Please select a quotation first');
+                  return;
+                }
+                try {
+                  setLoading(true);
+                  setError('');
+                  await quotationService.linkCatalogs(quotationId, selectedCatalogs);
+                  // Refresh quotation data to get updated linked catalogs
+                  const quotation = await quotationService.getQuotationById(quotationId);
+                  setSelectedCatalogs(quotation.linkedCatalogs?.map(c => c.id) || []);
+                  setCatalogModalOpen(false);
+                  setCatalogFilter('');
+                  // Refresh catalogs list
+                  const catalogsData = await catalogService.getAllCatalogs();
+                  setCatalogs(catalogsData);
+                } catch (err) {
+                  setError('Failed to link catalogs: ' + err.message);
+                  console.error('Catalog linking error:', err);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+            >
+              <i className="fas fa-save"></i>
+              Save & Finalize
             </button>
           </div>
         </div>

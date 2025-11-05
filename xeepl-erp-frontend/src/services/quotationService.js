@@ -7,6 +7,7 @@ export const quotationService = {
     return await get(ENDPOINTS.QUOTATIONS);
   },
 
+
   // Get quotation by ID
   getQuotationById: async (id) => {
     return await get(`${ENDPOINTS.QUOTATIONS}/${id}`);
@@ -27,7 +28,23 @@ export const quotationService = {
     return await del(`${ENDPOINTS.QUOTATIONS}/${id}`);
   },
 
-  // Export quotation as PDF
+//method for downloading catalogs as ZIP
+downloadLinkedCatalogsZip: async (quotationId) => {
+  const endpoint = `${ENDPOINTS.QUOTATIONS}/${quotationId}/catalogs-zip`;
+  await downloadFile(endpoint, `quotation_${quotationId}_catalogs.zip`);
+},
+// method to link catalogs (try POST first, fallback to PUT for older backends)
+linkCatalogs: async (quotationId, catalogIds) => {
+  const body = { catalogIds };
+  const endpoint = `${ENDPOINTS.QUOTATIONS}/${quotationId}/link-catalogs`;
+  try {
+    return await post(endpoint, body);
+  } catch (e) {
+    // Retry with PUT if POST not supported
+    return await put(endpoint, body);
+  }
+},
+ // Export quotation as PDF
   exportQuotationPDF: async (id) => {
     await downloadFile(
       `${ENDPOINTS.QUOTATIONS}/${id}/export-pdf`,

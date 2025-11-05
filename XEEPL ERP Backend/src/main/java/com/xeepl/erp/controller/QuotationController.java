@@ -2,13 +2,15 @@ package com.xeepl.erp.controller;
 
 import com.xeepl.erp.dto.*;
 import com.xeepl.erp.service.QuotationService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/quotations")
@@ -30,19 +32,26 @@ public class QuotationController {
     public ResponseEntity<QuotationDTO> create(@Valid @RequestBody QuotationCreateDTO dto) {
         return ResponseEntity.ok(quotationService.createQuotation(dto));
     }
+    @PostMapping("/{id}/link-catalogs")
+    public ResponseEntity<QuotationDTO> linkCatalogs(
+            @PathVariable Long id,
+            @RequestBody Map<String, List<Long>> payload
+    ) {
+        List<Long> catalogIds = payload.get("catalogIds");
+        QuotationDTO updated = quotationService.linkCatalogsToQuotation(id, catalogIds);
+        return ResponseEntity.ok(updated);
+    }
+    @GetMapping("/{id}/catalogs-zip")
+    public void downloadCatalogsZip(
+            @PathVariable Long id,
+            HttpServletResponse response
+    ) throws IOException {
+        quotationService.downloadCatalogsAsZip(id, response);
+    }
 
     @PutMapping("/{id}")
     public ResponseEntity<QuotationDTO> update(@PathVariable Long id, @Valid @RequestBody QuotationUpdateDTO dto) {
         return ResponseEntity.ok(quotationService.updateQuotation(id, dto));
-    }
-
-    @GetMapping("/{id}/export-pdf")
-    public ResponseEntity<byte[]> exportPdf(@PathVariable Long id) {
-        byte[] pdf = quotationService.exportQuotationPdf(id);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=quotation_" + id + ".pdf")
-                .header(HttpHeaders.CONTENT_TYPE, "application/pdf")
-                .body(pdf);
     }
 
     @DeleteMapping("/{id}")

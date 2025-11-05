@@ -4,13 +4,20 @@ import { quotationService } from '../../services/quotationService';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import '../../styles/quotationview.css';
-
+import { downloadQuotationPDF } from '../../utils/pdfGenerator';
 const QuotationView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [quotation, setQuotation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const handleDownloadCatalogsZip = async () => {
+  try {
+    await quotationService.downloadLinkedCatalogsZip(quotation.id);
+  } catch (err) {
+    setError('Failed to download catalogs: ' + err.message);
+  }
+};
 
   const fetchQuotation = useCallback(async () => {
     setLoading(true);
@@ -30,9 +37,15 @@ const QuotationView = () => {
   }, [fetchQuotation]);
 
   const handleDownloadPDF = async () => {
-    // TODO: implement PDF generation/download; simple fallback to print for now
-    window.print();
-  };
+  try {
+    setLoading(true);
+    await downloadQuotationPDF(quotation, quotation.items || []);
+  } catch (err) {
+    setError('Failed to generate PDF: ' + err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleBack = () => {
     navigate('/quotations');
@@ -152,10 +165,13 @@ const QuotationView = () => {
             <h3>Linked Catalogs (ZIP)</h3>
           </div>
           <div className="catalog-actions">
-            <button className="btn btn-download">
-              <i className="fas fa-download"></i>
-              Download Linked Catalogs (ZIP)
-            </button>
+            <button 
+        className="btn btn-download"
+        onClick={handleDownloadCatalogsZip}
+      >
+        <i className="fas fa-download"></i>
+        Download All Catalogs (ZIP)
+      </button>
             <button className="btn btn-download-csv">
               <i className="fas fa-file-csv"></i>
               Download CSV

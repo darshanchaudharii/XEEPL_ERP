@@ -18,22 +18,65 @@ export const fetchAPI = async (endpoint, options = {}) => {
       }
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        message: `HTTP error! status: ${response.status}`
-      }));
-      throw new Error(errorData.message || `Request failed with status ${response.status}`);
-    }
-
     // Handle no content responses
     if (response.status === 204) {
       return null;
+    }
+
+    // Check if response is JSON
+    const contentType = response.headers.get('content-type');
+    const isJson = contentType && contentType.includes('application/json');
+
+    if (!response.ok) {
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      let errorDetails = null;
+      
+      if (isJson) {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+          errorDetails = errorData;
+        } catch (e) {
+          // If JSON parsing fails, use default message
+        }
+      } else {
+        // Response is HTML or other non-JSON content
+        try {
+          const text = await response.text();
+          if (response.status === 404) {
+            errorMessage = `Endpoint not found: ${endpoint}. The API endpoint may not exist or the server is not configured correctly.`;
+          } else if (response.status === 500) {
+            errorMessage = `Server error (500): ${endpoint}. The server encountered an error processing your request. Please check the server logs for details.`;
+            // Try to extract error message from HTML if possible
+            const match = text.match(/<title>(.*?)<\/title>/i) || text.match(/<h1>(.*?)<\/h1>/i);
+            if (match) {
+              errorMessage += ` Server message: ${match[1]}`;
+            }
+          } else {
+            errorMessage = `Request failed with status ${response.status}. The server returned HTML instead of JSON.`;
+          }
+        } catch (e) {
+          // If text reading fails, use default message
+        }
+      }
+      
+      const error = new Error(errorMessage);
+      if (errorDetails) {
+        error.details = errorDetails;
+      }
+      error.status = response.status;
+      throw error;
+    }
+
+    if (!isJson) {
+      throw new Error(`Expected JSON response but received ${contentType || 'unknown content type'} from ${endpoint}`);
     }
 
     return await response.json();
   } catch (error) {
     console.error('API Error Details:', {
       endpoint,
+      url,
       error: error.message,
       stack: error.stack
     });
@@ -48,14 +91,15 @@ export const get = (endpoint) => {
   });
 };
 
-// POST request with JSON body
+// POST request with JSON body or FormData
 export const post = (endpoint, data) => {
   return fetchAPI(endpoint, {
     method: 'POST',
-    headers: {
+    // Remove Content-Type header for FormData (browser sets it automatically with boundary)
+    headers: data instanceof FormData ? {} : {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(data)
+    body: data instanceof FormData ? data : JSON.stringify(data)
   });
 };
 

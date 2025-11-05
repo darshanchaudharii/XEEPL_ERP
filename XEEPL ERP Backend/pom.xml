@@ -63,15 +63,7 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
-        <dependency>
-            <groupId>com.itextpdf</groupId>
-            <artifactId>itext7-core</artifactId>
-            <version>7.2.3</version>
-            <type>pom</type>
-        </dependency>
-
-    </dependencies>
+ </dependencies>
 
     <build>
         <plugins>

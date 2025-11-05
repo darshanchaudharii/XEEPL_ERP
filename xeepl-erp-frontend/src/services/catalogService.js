@@ -1,5 +1,5 @@
 import { API_BASE_URL, ENDPOINTS } from '../utils/constants';
-import { get, post, put, del, downloadFile } from './api';
+import { get, post, postFormData, put, putFormData, del, downloadFile } from './api';
 
 export const catalogService = {
   // Get all catalogs
@@ -16,11 +16,12 @@ export const catalogService = {
   createCatalog: async (catalogData, file = null) => {
     if (file) {
       const formData = new FormData();
-      Object.keys(catalogData).forEach(key => {
-        formData.append(key, catalogData[key]);
-      });
+      // Backend expects metadata as a JSON object and file separately
+      formData.append('metadata', new Blob([JSON.stringify(catalogData)], {
+        type: 'application/json'
+      }));
       formData.append('file', file);
-      return await post(ENDPOINTS.CATALOGS, formData);
+      return await postFormData(ENDPOINTS.CATALOGS, formData);
     }
     return await post(ENDPOINTS.CATALOGS, catalogData);
   },
@@ -29,11 +30,12 @@ export const catalogService = {
   updateCatalog: async (id, catalogData, file = null) => {
     if (file) {
       const formData = new FormData();
-      Object.keys(catalogData).forEach(key => {
-        formData.append(key, catalogData[key]);
-      });
+      // Backend expects metadata as a JSON object and file separately
+      formData.append('metadata', new Blob([JSON.stringify(catalogData)], {
+        type: 'application/json'
+      }));
       formData.append('file', file);
-      return await put(`${ENDPOINTS.CATALOGS}/${id}`, formData);
+      return await putFormData(`${ENDPOINTS.CATALOGS}/${id}`, formData);
     }
     return await put(`${ENDPOINTS.CATALOGS}/${id}`, catalogData);
   },
@@ -45,35 +47,45 @@ export const catalogService = {
 
   // Download catalog file
   downloadCatalogFile: async (catalog) => {
-    // Prefer backend-provided absolute URL; fall back to known pattern
-    const rawUrl = catalog.downloadUrl
-      ? catalog.downloadUrl
-      : `${API_BASE_URL}${ENDPOINTS.CATALOGS}/download/catalog-files/${catalog.fileName}`;
+    let endpoint = null;
+    let filename = catalog.fileName || 'download';
 
-    const filename = catalog.fileName || (rawUrl.split('/').pop() || 'download');
-
-    // If absolute URL, bypass proxy and let the browser handle streaming directly
-    if (/^https?:\/\//i.test(rawUrl)) {
-      const link = document.createElement('a');
-      link.href = rawUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      return;
+    // Use downloadUrl from backend response if available
+    if (catalog.downloadUrl) {
+      try {
+        // Parse the absolute URL to extract the path
+        const url = new URL(catalog.downloadUrl);
+        // Extract the path (e.g., "/api/catalogs/download/catalog-files/...")
+        endpoint = url.pathname;
+        
+        // Extract filename from URL if not provided
+        if (!catalog.fileName) {
+          const pathParts = endpoint.split('/');
+          filename = pathParts[pathParts.length - 1] || 'download';
+        }
+      } catch (e) {
+        // If downloadUrl is not a valid absolute URL, treat it as a relative path
+        endpoint = catalog.downloadUrl.startsWith('/')
+          ? catalog.downloadUrl
+          : `/${catalog.downloadUrl}`;
+      }
+    } else {
+      // Fallback: construct the endpoint from fileName
+      endpoint = `${ENDPOINTS.CATALOGS}/download/catalog-files/${catalog.fileName}`;
     }
 
-    // Otherwise, normalize to endpoint and use blob download
-    let pathname = rawUrl;
-    try {
-      pathname = new URL(rawUrl, window.location.origin).pathname;
-    } catch (_) {}
+    // Normalize endpoint: ensure it starts with / and remove API_BASE_URL prefix if present
+    // (downloadFile will add API_BASE_URL automatically)
+    if (endpoint.startsWith(API_BASE_URL)) {
+      endpoint = endpoint.slice(API_BASE_URL.length);
+    }
+    
+    // Ensure endpoint starts with /
+    if (!endpoint.startsWith('/')) {
+      endpoint = `/${endpoint}`;
+    }
 
-    const endpoint = pathname.startsWith(API_BASE_URL)
-      ? pathname.slice(API_BASE_URL.length)
-      : pathname;
-
-    console.log('Catalog download (proxied):', { rawUrl, pathname, endpoint, filename });
+    console.log('Downloading catalog file:', { endpoint, filename, catalog });
     await downloadFile(endpoint, filename);
   }
 };
