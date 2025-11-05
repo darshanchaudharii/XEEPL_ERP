@@ -136,7 +136,33 @@ const handleDecrementQuantity = (lineId) => {
     setLoading(true);
     try {
       const quotation = await quotationService.getQuotationById(qId);
-      setQuotationLines(quotation.items || []);
+      // Enrich quotation lines with itemId by matching with items list
+      const enrichedLines = (quotation.items || []).map(line => {
+        // If itemId is missing, try to find it by matching itemDescription
+        if (!line.itemId && line.itemDescription) {
+          const matchedItem = items.find(i => 
+            i.itemName === line.itemDescription || 
+            i.itemName === line.itemDescription.replace(' (Raw Material)', '')
+          );
+          if (matchedItem) {
+            return {
+              ...line,
+              itemId: matchedItem.id,
+              itemLongDescription: matchedItem.itemDescription || matchedItem.description || line.itemLongDescription || ''
+            };
+          }
+        }
+        // If rawId is missing, try to find it
+        if (line.isRawMaterial && !line.rawId && line.itemDescription) {
+          const rawName = line.itemDescription.replace(' (Raw Material)', '');
+          const matchedRaw = rawMaterials.find(r => r.name === rawName);
+          if (matchedRaw) {
+            return { ...line, rawId: matchedRaw.id };
+          }
+        }
+        return line;
+      });
+      setQuotationLines(enrichedLines);
       setCustomerId(quotation.customer?.id || '');
       setSelectedCatalogs(quotation.linkedCatalogs?.map(c => c.id) || []);
     } catch (err) {
@@ -196,18 +222,33 @@ const handleDecrementQuantity = (lineId) => {
     const item = items.find(i => i.id === Number(selectedItem));
     if (!item) return;
 
-    // Check if item already exists (by stable itemId)
+    const qtyToAdd = Number(itemQty) || 1;
+    const rate = Number(itemRate) || Number(item.itemPrice) || 0;
+
+    // Check if item already exists (match by itemId first, then by itemDescription as fallback)
     const existingLineIndex = quotationLines.findIndex(
-      line => !line.isRawMaterial && line.itemId === item.id
+      line => !line.isRawMaterial && (
+        line.itemId === item.id || 
+        (line.itemId === undefined && line.itemDescription === item.itemName)
+      )
     );
 
     if (existingLineIndex !== -1) {
-      // Increment quantity
+      // Increment quantity on existing line
       setQuotationLines(prev => {
-        const updated = [...prev];
-        updated[existingLineIndex].quantity += Number(itemQty);
-        updated[existingLineIndex].total = 
-          updated[existingLineIndex].quantity * updated[existingLineIndex].unitPrice;
+        const updated = prev.map((line, idx) => {
+          if (idx === existingLineIndex) {
+            const newQty = Number(line.quantity) + qtyToAdd;
+            return {
+              ...line,
+              itemId: item.id, // Ensure itemId is set
+              quantity: newQty,
+              total: newQty * Number(line.unitPrice || rate),
+              itemLongDescription: item.itemDescription || item.description || line.itemLongDescription || ''
+            };
+          }
+          return line;
+        });
         return updated;
       });
     } else {
@@ -217,12 +258,11 @@ const handleDecrementQuantity = (lineId) => {
         itemId: item.id,
         itemDescription: item.itemName,
         itemLongDescription: item.itemDescription || item.description || '',
-        quantity: Number(itemQty),
-        unitPrice: Number(itemRate) || Number(item.itemPrice) || 0,
-        total: 0,
+        quantity: qtyToAdd,
+        unitPrice: rate,
+        total: qtyToAdd * rate,
         isRawMaterial: false
       };
-      newLine.total = newLine.quantity * newLine.unitPrice;
       setQuotationLines(prev => [...prev, newLine]);
     }
 
@@ -240,35 +280,52 @@ const handleDecrementQuantity = (lineId) => {
     const raw = rawMaterials.find(r => r.id === Number(selectedRawMaterial));
     if (!raw) return;
 
+    const qtyToAdd = Number(rawQty) || 1;
+    const rate = Number(rawRate) || Number(raw.price) || 0;
+
     // Attach to the most recently added ITEM row (parent)
     const lastItem = [...quotationLines].reverse().find(l => !l.isRawMaterial);
     const parentItemId = lastItem ? lastItem.id : null;
 
     const description = `${raw.name} (Raw Material)`;
+    
+    // Check if raw material already exists with same parent
     const existingLineIndex = quotationLines.findIndex(
-      line => line.isRawMaterial && line.rawId === raw.id && line.parentItemId === parentItemId
+      line => line.isRawMaterial && (
+        (line.rawId === raw.id && line.parentItemId === parentItemId) ||
+        (line.rawId === undefined && line.itemDescription === description && line.parentItemId === parentItemId)
+      )
     );
 
     if (existingLineIndex !== -1) {
+      // Increment quantity on existing raw material line
       setQuotationLines(prev => {
-        const updated = [...prev];
-        updated[existingLineIndex].quantity += Number(rawQty);
-        updated[existingLineIndex].total = 
-          updated[existingLineIndex].quantity * updated[existingLineIndex].unitPrice;
+        const updated = prev.map((line, idx) => {
+          if (idx === existingLineIndex) {
+            const newQty = Number(line.quantity) + qtyToAdd;
+            return {
+              ...line,
+              rawId: raw.id, // Ensure rawId is set
+              quantity: newQty,
+              total: newQty * Number(line.unitPrice || rate)
+            };
+          }
+          return line;
+        });
         return updated;
       });
     } else {
+      // Add new raw material line
       const newLine = {
         id: Date.now(),
         rawId: raw.id,
         itemDescription: description,
-        quantity: Number(rawQty),
-        unitPrice: Number(rawRate) || Number(raw.price) || 0,
-        total: 0,
+        quantity: qtyToAdd,
+        unitPrice: rate,
+        total: qtyToAdd * rate,
         isRawMaterial: true,
         parentItemId
       };
-      newLine.total = newLine.quantity * newLine.unitPrice;
       setQuotationLines(prev => [...prev, newLine]);
     }
 

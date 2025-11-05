@@ -172,8 +172,8 @@ export const generateQuotationPDF = async (quotation, quotationLines, options = 
             <Text style={styles.col1}>Sr No</Text>
             <Text style={styles.col2}>Description</Text>
             <Text style={styles.col3}>Qty</Text>
-            <Text style={styles.col4}>Rate (₹)</Text>
-            <Text style={styles.col5}>Total (₹)</Text>
+            <Text style={styles.col4}>Rate ₹</Text>
+            <Text style={styles.col5}>Total ₹</Text>
           </View>
 
           {/* Table Rows */}
