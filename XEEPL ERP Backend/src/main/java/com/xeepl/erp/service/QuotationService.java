@@ -4,26 +4,83 @@ import com.xeepl.erp.dto.*;
 import com.xeepl.erp.entity.*;
 import com.xeepl.erp.mapper.QuotationMapper;
 import com.xeepl.erp.repository.*;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 @Service
-@RequiredArgsConstructor
 public class QuotationService {
     private final QuotationRepository quotationRepository;
     private final QuotationLineRepository quotationLineRepository;
     private final UserRepository userRepository;
     private final CatalogRepository catalogRepository;
     private final QuotationMapper quotationMapper;
+
+    public QuotationService(QuotationRepository quotationRepository, QuotationLineRepository quotationLineRepository, UserRepository userRepository, CatalogRepository catalogRepository, QuotationMapper quotationMapper) {
+        this.catalogRepository = catalogRepository;
+        this.userRepository = userRepository;
+        this.quotationMapper = quotationMapper;
+        this.quotationRepository = quotationRepository;
+        this.quotationLineRepository = quotationLineRepository;
+    }
+    @Transactional(readOnly = true)
+    public QuotationDTO getQuotation(Long id, boolean includeRemoved) {
+        Quotation q = quotationRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Quotation not found"));
+        QuotationDTO dto = QuotationMapper.toDto(q); // reuse existing mapper but ensure it includes new fields
+        // If mapper does not filter removed raws, you can filter here:
+        if(!includeRemoved) {
+            for (QuotationLineDTO line : dto.getLines()) {
+                if(line.getIsRawMaterial() != null && line.getIsRawMaterial()) {
+                    // filter out raws with removed=true
+                    List<QuotationLineDTO> keep = line.getRawLines().stream()
+                            .filter(r -> r.getRemoved() == null || !r.getRemoved())
+                            .collect(Collectors.toList());
+                    line.setRawLines(keep);
+                }
+            }
+        }
+        return dto;
+    }
+
+    @Transactional
+    public void finalizeQuotation(Long id) {
+        Quotation q = quotationRepository.findById(id).orElseThrow();
+        q.setStatus(QuotationStatus.valueOf("FINALIZED"));
+        quotationRepository.save(q);
+    }
+
+    @Transactional
+    public QuotationLineDTO updateLine(Long lineId, Integer qty, BigDecimal rate) {
+        QuotationLine line = quotationLineRepository.findById(lineId).orElseThrow();
+        if(qty != null) line.setQuantity(qty);
+        if(rate != null) line.setUnitPrice(rate);
+        // recalc total
+        BigDecimal total = (line.getUnitPrice() != null ? line.getUnitPrice() : BigDecimal.ZERO)
+                .multiply(BigDecimal.valueOf(line.getQuantity() != null ? line.getQuantity() : 0));
+        line.setTotal(total);
+        quotationLineRepository.save(line);
+        return QuotationMapper.toLineDto(line);
+    }
+
+    @Transactional
+    public void markLineRemoved(Long lineId, boolean removed) {
+        QuotationLine line = quotationLineRepository.findById(lineId).orElseThrow();
+        line.setRemoved(removed);
+        quotationLineRepository.save(line);
+    }
+
 
     // List all quotations
     public List<QuotationDTO> listQuotations() {
@@ -107,6 +164,8 @@ public class QuotationService {
             }
         }
     }
+
+
 
     // Update an existing quotation
     public QuotationDTO updateQuotation(Long id, QuotationUpdateDTO dto) {

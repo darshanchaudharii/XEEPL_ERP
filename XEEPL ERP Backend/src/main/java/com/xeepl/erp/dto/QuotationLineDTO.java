@@ -10,4 +10,8 @@ public class QuotationLineDTO {
     private int quantity;
     private BigDecimal unitPrice;
     private BigDecimal total;
+    private Boolean isRawMaterial;
+    private Long parentItemId;
+    private Long rawId;
+    private Boolean removed;
 }

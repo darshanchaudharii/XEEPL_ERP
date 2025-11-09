@@ -6,6 +6,7 @@ import ErrorMessage from '../common/ErrorMessage';
 import Modal from '../common/Modal';
 import '../../styles/usermaster.css';
 
+
 const UserMaster = () => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -241,7 +242,7 @@ const UserMaster = () => {
             <div className="form-group">
               <label>Mobile</label>
               <input
-                type="text"
+                type="tel"
                 name="mobile"
                 value={form.mobile}
                 onChange={handleChange}

@@ -11,6 +11,7 @@ const ItemMaster = () => {
   const [items, setItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [form, setForm] = useState({
     itemName: '',
@@ -39,7 +40,7 @@ const ItemMaster = () => {
       String(item.id).includes(searchLower) ||
       (item.itemName || '').toLowerCase().includes(searchLower) ||
       (item.itemCode || '').toLowerCase().includes(searchLower) ||
-      (item.itemCategoryName || '').toLowerCase().includes(searchLower)
+      ((item.itemCategoryName || '') + '').toLowerCase().includes(searchLower)
     );
     setFilteredItems(filtered);
   }, [search, items]);
@@ -49,46 +50,87 @@ const ItemMaster = () => {
     setError('');
     try {
       const data = await itemService.getAllItems();
-      setItems(data);
+      console.info('[ItemMaster] fetchItems result length:', Array.isArray(data) ? data.length : 'not-array');
+      setItems(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError('Failed to fetch items: ' + err.message);
+      setError('Failed to fetch items: ' + (err.message || err));
     } finally {
       setLoading(false);
     }
   };
 
+  // Robust fetchCategories: try contentService, fall back to direct fetch using VITE_API_BASE
   const fetchCategories = async () => {
-    try {
-      const data = await contentService.getAllContents();
-      setCategories(data);
-    } catch (err) {
-      console.error('Failed to fetch categories:', err);
-    }
-  };
+  try {
+    const data = await contentService.getAllContents();
+    if (!Array.isArray(data)) return;
+
+    // Filter only 'Item Category'
+    const categoriesData = data.filter(c => c.sectionName === 'Item Category');
+    setCategories(categoriesData);
+
+    // Save all content to filter subcategories later
+    sessionStorage.setItem('allContents', JSON.stringify(data));
+
+    console.log('[ItemMaster] Loaded categories:', categoriesData.length);
+  } catch (err) {
+    console.error('Failed to fetch categories:', err);
+  }
+};
+  const fetchSubcategories = (categoryId) => {
+  if (!categoryId) {
+    setSubcategories([]);
+    return;
+  }
+
+  try {
+    const allContents = JSON.parse(sessionStorage.getItem('allContents')) || [];
+    // Filter 'Item Sub Category'
+    const subcats = allContents.filter(c => c.sectionName === 'Item Sub Category');
+    setSubcategories(subcats);
+    console.log('[ItemMaster] Loaded subcategories:', subcats.length);
+  } catch (err) {
+    console.error('Failed to fetch subcategories:', err);
+  }
+};
 
   const fetchSuppliers = async () => {
     try {
       const data = await userService.getAllUsers('Supplier');
-      setSuppliers(data);
+      setSuppliers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to fetch suppliers:', err);
     }
   };
 
   useEffect(() => {
+    console.info('[ItemMaster] mounted - starting initial fetches');
     fetchItems();
     fetchCategories();
     fetchSuppliers();
+    
   }, []);
 
   useEffect(() => {
     filterItems();
   }, [filterItems]);
 
-  
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  // custom handler for category select to also load subcategories
+  const handleCategoryChange = (e) => {
+    const { name, value } = e.target;
+    // set form first
+    setForm(prev => ({ ...prev, [name]: value, itemSubcategoryId: '' }));
+    // fetch subcategories for this category id
+    if (value) {
+      fetchSubcategories(value);
+    } else {
+      setSubcategories([]);
+    }
   };
 
   const resetForm = () => {
@@ -134,7 +176,7 @@ const ItemMaster = () => {
       await fetchItems();
       resetForm();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Save failed');
     } finally {
       setLoading(false);
     }
@@ -152,6 +194,10 @@ const ItemMaster = () => {
       itemCode: item.itemCode || '',
       description: item.description || ''
     });
+    // fetch subcategories for the category already assigned (so UI shows subcategory)
+    if (item.itemCategoryId) {
+      fetchSubcategories(item.itemCategoryId);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -211,12 +257,15 @@ const ItemMaster = () => {
               <select
                 name="itemCategoryId"
                 value={form.itemCategoryId}
-                onChange={handleChange}
+                onChange={(e) => {
+                  handleCategoryChange(e);
+                  fetchSubcategories(e.target.value);
+                }}
               >
                 <option value="">Select category</option>
                 {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
-                    {cat.title}
+                    {cat.title || cat.name || cat.contentValue || cat.value}
                   </option>
                 ))}
               </select>
@@ -234,9 +283,9 @@ const ItemMaster = () => {
                 onChange={handleChange}
               >
                 <option value="">Select sub-category</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.title}
+                {subcategories.map((sub) => (
+                  <option key={sub.id} value={sub.id}>
+                    {sub.title || sub.name || sub.contentValue || sub.value}
                   </option>
                 ))}
               </select>
@@ -281,8 +330,8 @@ const ItemMaster = () => {
                 name="itemPrice"
                 value={form.itemPrice}
                 onChange={handleChange}
-                placeholder="0.00"
-                step="0.01"
+                placeholder="00.00"
+                step="100.00"
               />
             </div>
 

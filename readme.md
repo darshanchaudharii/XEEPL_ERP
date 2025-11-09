@@ -95,7 +95,7 @@ npm run dev
 
 ➡️ Open: http://localhost:5173
 
-🔧 Backend Setup
+## 🔧 Backend Setup
 Configuration (src/main/resources/application.properties)
 server.port=8080
 
