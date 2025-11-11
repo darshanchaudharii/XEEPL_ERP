@@ -46,6 +46,57 @@ src/
 7) Finalize & Save: sets status FINALIZED and snapshots the quotation.
 8) Download PDF: mirrors the current table layout (items then raws).
 
+## 📊 Diagrams
+
+Frontend/Proxy/Backend dev setup
+
+```mermaid
+flowchart LR
+  Vite[Vite Dev Server :5173] -- "/api/* proxy" --> SB[Spring Boot :8080]
+  SB --> MySQL[(MySQL :3306)]
+```
+
+Frontend quotation components map
+
+```mermaid
+flowchart TD
+  App --> QuotationMaster[components/quotations/QuotationMaster]
+  App --> MakeQuotation[components/quotations/MakeQuotation]
+  App --> QuotationView[components/quotations/QuotationView]
+
+  MakeQuotation --> S1[services/quotationService]
+  MakeQuotation --> S2[services/userService]
+  MakeQuotation --> S3[services/itemService]
+  MakeQuotation --> S4[services/rawMaterialService]
+  MakeQuotation --> S5[services/catalogService]
+  MakeQuotation --> Utils[utils/pdfGenerator.jsx]
+
+  QuotationView --> S1
+  QuotationView --> Utils
+
+  S1 -.-> api[services/api.js (GET/POST/PUT/PATCH/DELETE)]
+```
+
+Quotation UI flow (draft to finalized)
+
+```mermaid
+flowchart TD
+  A[Open Make Quotation] --> B[Select/Create Quotation]
+  B --> C[Assign Customer<br/>PUT /quotations/{id}]
+  C --> D[Add Item lines]
+  D --> E[Add Raw lines under last Item]
+  D --> D1[Inline edit Qty/Rate]
+  E --> E1[Inline edit Qty/Rate]
+  D --> D2[Soft delete line<br/>PATCH /lines/{id}/remove]
+  E --> E2[Soft delete raw<br/>PATCH /lines/{id}/remove]
+  D2 --> F[Toggle 'Show removed raws']
+  E2 --> F
+  F --> G[Removed raws appear inline (a, b, ...)]
+  G --> H[Manage Linked Catalogs]
+  H --> I[Finalize & Save]
+  I --> K[Download PDF (matches table)]
+```
+
 ## 🧪 Commands
 - `npm run dev` – start dev server
 - `npm run build` – production build

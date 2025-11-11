@@ -81,6 +81,98 @@ Browser (React @5173) ← REST → Spring Boot API @8080 ← JDBC → MySQL
 + File system (uploads/) for catalogs  
 + Client‑side PDF rendering to match the UI exactly
 
+### Diagrams
+
+System architecture
+
+```mermaid
+flowchart LR
+  subgraph Browser["User Browser"]
+    UI[React App :5173]
+  end
+
+  subgraph Frontend["xeepl-erp-frontend (Vite)"]
+    Proxy[(Vite Proxy)]
+  end
+
+  subgraph Backend["XEEPL ERP Backend (Spring Boot :8080)"]
+    API[REST Controllers]
+    SVC[Services]
+    REPO[JPA Repositories]
+    FS[(Uploads/catalog-files)]
+  end
+
+  subgraph DB["MySQL :3306"]
+    schema[(xeepl_erp)]
+  end
+
+  UI --> Proxy --> API --> SVC --> REPO --> schema
+  SVC --- FS
+```
+
+Quotation module flow
+
+```mermaid
+flowchart TD
+  A[Open Make Quotation] --> B[Select/Create Quotation]
+  B --> C[Assign Customer<br/>PUT /quotations/{id}]
+  C --> D[Add Item lines]
+  D --> E[Add Raw lines under last Item]
+  D --> D1[Inline edit Qty/Rate]:::act
+  E --> E1[Inline edit Qty/Rate]:::act
+  D --> D2[Soft delete line<br/>PATCH /lines/{id}/remove]
+  E --> E2[Soft delete raw<br/>PATCH /lines/{id}/remove]
+  D2 --> F[Toggle 'Show removed raws'<br/>GET /quotations/{id}?includeRemoved=true]
+  E2 --> F
+  F --> G[Removed raws appear inline (a, b, ...)]
+  G --> H[Manage Linked Catalogs<br/>POST/PUT /quotations/{id}/link-catalogs]
+  H --> I[Finalize & Save<br/>PUT /quotations/{id} (FINALIZED)]
+  I --> J[Snapshot stored (audit)]
+  J --> K[Download PDF (matches table ordering)]
+
+  classDef act fill:#e8f7ff,stroke:#5dade2,color:#1f2a44;
+```
+
+End-to-end sequence
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant FE as Frontend (React)
+  participant BE as Backend (Spring Boot)
+  participant DB as MySQL
+  participant FS as Uploads
+
+  U->>FE: Select quotation
+  FE->>BE: GET /api/quotations/{id}?includeRemoved=true
+  BE->>DB: Fetch quotation + lines
+  DB-->>BE: Data
+  BE-->>FE: Quotation DTO
+
+  U->>FE: Assign customer
+  FE->>BE: PUT /api/quotations/{id} { customerId, ... }
+  BE->>DB: Update quotation
+  DB-->>BE: OK
+  BE-->>FE: Updated quotation
+
+  U->>FE: Link catalogs
+  FE->>BE: POST/PUT /api/quotations/{id}/link-catalogs
+  BE->>DB: Update links
+  DB-->>BE: OK
+  BE-->>FE: Updated quotation
+
+  U->>FE: Finalize
+  FE->>BE: PUT /api/quotations/{id} { status: FINALIZED, ... }
+  BE->>DB: Persist FINALIZED
+  BE->>DB: Insert QuotationSnapshot
+  DB-->>BE: OK
+  BE-->>FE: Finalized DTO
+
+  U->>FE: Download PDF
+  FE->>FE: Order items + raws (optional removed raws)
+  FE-->>U: PDF file
+```
+
 ---
 
 ## ⚙️ Prerequisites

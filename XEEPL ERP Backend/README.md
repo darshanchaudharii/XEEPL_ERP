@@ -54,6 +54,131 @@ java -jar target/xeepl-erp-backend-0.0.1-SNAPSHOT.jar
   - GET `/quotations/{id}/catalogs-zip` – download catalogs as ZIP
   - GET `/quotations/{id}/export-pdf` – PDF export stub (client handles download now)
 
+## 📊 Diagrams
+
+Backend layers
+
+```mermaid
+flowchart LR
+  subgraph Controllers
+    Qc[QuotationController]
+    Ic[ItemController]
+    Rc[RawMaterialController]
+    Cc[CatalogController]
+    Uc[UserController]
+  end
+
+  subgraph Services
+    Qs[QuotationService]
+  end
+
+  subgraph Persistence
+    Qr[QuotationRepository]
+    Qlr[QuotationLineRepository]
+    Cr[CatalogRepository]
+    Ur[UserRepository]
+    Qsr[QuotationSnapshotRepository]
+  end
+
+  subgraph Domain
+    Q[Quotation]
+    QL[QuotationLine]
+    C[Catalog]
+    U[User]
+    QS[QuotationSnapshot]
+  end
+
+  Qc --> Qs
+  Ic --> Qs
+  Rc --> Qs
+  Cc --> Qs
+  Uc --> Qs
+
+  Qs --> Qr
+  Qs --> Qlr
+  Qs --> Cr
+  Qs --> Ur
+  Qs --> Qsr
+
+  Qr --> Q
+  Qlr --> QL
+  Cr --> C
+  Ur --> U
+  Qsr --> QS
+```
+
+Domain model (simplified)
+
+```mermaid
+classDiagram
+  class Quotation {
+    +id: Long
+    +name: String
+    +date: LocalDate
+    +expiryDate: LocalDate
+    +status: QuotationStatus
+    +customer: User
+    +items: QuotationLine[*]
+    +linkedCatalogs: Catalog[*]
+  }
+
+  class QuotationLine {
+    +id: Long
+    +itemDescription: String
+    +quantity: BigDecimal
+    +unitPrice: BigDecimal
+    +total: BigDecimal
+    +isRawMaterial: Boolean
+    +parentItemId: Long
+    +rawId: Long
+    +removed: Boolean
+  }
+
+  class Catalog {
+    +id: Long
+    +title: String
+    +fileName: String
+    +filePath: String
+  }
+
+  class User {
+    +id: Long
+    +fullName: String
+    +email: String
+    +role: String
+  }
+
+  class QuotationSnapshot {
+    +id: Long
+    +quotationId: Long
+    +payloadJson: String
+    +createdAt: LocalDateTime
+  }
+
+  Quotation "1" o-- "many" QuotationLine : has
+  Quotation "many" o-- "many" Catalog : linked
+  Quotation "0..1" --> "1" User : customer
+  QuotationSnapshot "*" --> "1" Quotation : captures
+  QuotationLine --> QuotationLine : parentItemId (raw -> item)
+```
+
+Quotations API map
+
+```mermaid
+flowchart TD
+  ROOT[/api/quotations/] -->|GET| LIST[List]
+  ROOT -->|POST| CREATE[Create]
+  QID[/api/quotations/{id}/] -->|GET<br/>?includeRemoved=true| GETQ[Get]
+  QID -->|PUT| UPDATE[Update/Finalize]
+  QID -->|DELETE| DEL[Delete]
+  QID -->|POST/PUT| LINK[link-catalogs]
+  QID -->|GET| ZIP[catalogs-zip]
+  QID -->|GET| PDF[export-pdf]
+  LINES[/api/quotations/lines/{lineId}/] -->|PATCH| EDIT[Edit line]
+  LINES -->|PATCH remove| REM[Soft remove]
+  LINES -->|PATCH undo| UNDO[Restore]
+```
+
 ## 🧠 Quotation Snapshot
 When a quotation is finalized, a JSON snapshot of lines is stored into `quotation_snapshots` for audit and reproducible output later. See `QuotationService.finalizeQuotation`.
 
