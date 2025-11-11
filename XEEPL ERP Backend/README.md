@@ -166,15 +166,15 @@ Quotations API map
 
 ```mermaid
 flowchart TD
-  ROOT[/api/quotations/] -->|GET| LIST[List]
+  ROOT[api/quotations] -->|GET| LIST[List]
   ROOT -->|POST| CREATE[Create]
-  QID[/api/quotations/{id}/] -->|"GET - ?includeRemoved=true"| GETQ[Get]
+  QID[api/quotations/id] -->|GET with includeRemoved| GETQ[Get]
   QID -->|PUT| UPDATE[Update/Finalize]
   QID -->|DELETE| DEL[Delete]
   QID -->|POST/PUT| LINK[link-catalogs]
   QID -->|GET| ZIP[catalogs-zip]
   QID -->|GET| PDF[export-pdf]
-  LINES[/api/quotations/lines/{lineId}/] -->|PATCH| EDIT[Edit line]
+  LINES[api/quotations/lines/lineId] -->|PATCH| EDIT[Edit line]
   LINES -->|PATCH remove| REM[Soft remove]
   LINES -->|PATCH undo| UNDO[Restore]
 ```

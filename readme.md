@@ -115,20 +115,20 @@ Quotation module flow
 ```mermaid
 flowchart TD
   A[Open Make Quotation] --> B[Select/Create Quotation]
-  B --> C["Assign Customer - PUT /quotations/{id}"]
+  B --> C[Assign Customer - PUT quotations endpoint]
   C --> D[Add Item lines]
   D --> E[Add Raw lines under last Item]
   D --> D1[Inline edit Qty/Rate]:::act
   E --> E1[Inline edit Qty/Rate]:::act
-  D --> D2["Soft delete line - PATCH /lines/{id}/remove"]
-  E --> E2["Soft delete raw - PATCH /lines/{id}/remove"]
-  D2 --> F["Toggle Show removed raws - GET /quotations/{id}?includeRemoved=true"]
+  D --> D2[Soft delete line - PATCH lines endpoint]
+  E --> E2[Soft delete raw - PATCH lines endpoint]
+  D2 --> F[Toggle Show removed raws - GET with includeRemoved]
   E2 --> F
-  F --> G[Removed raws appear inline (a, b, ...)]
-  G --> H["Manage Linked Catalogs - POST/PUT /quotations/{id}/link-catalogs"]
-  H --> I["Finalize & Save - PUT /quotations/{id} (FINALIZED)"]
-  I --> J[Snapshot stored (audit)]
-  J --> K[Download PDF (matches table ordering)]
+  F --> G[Removed raws appear inline]
+  G --> H[Manage Linked Catalogs - POST/PUT link-catalogs]
+  H --> I[Finalize & Save - PUT with FINALIZED status]
+  I --> J[Snapshot stored for audit]
+  J --> K[Download PDF matches table ordering]
 
   classDef act fill:#e8f7ff,stroke:#5dade2,color:#1f2a44;
 ```
