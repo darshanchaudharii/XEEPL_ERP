@@ -168,7 +168,7 @@ Quotations API map
 flowchart TD
   ROOT[/api/quotations/] -->|GET| LIST[List]
   ROOT -->|POST| CREATE[Create]
-  QID[/api/quotations/{id}/] -->|GET<br/>?includeRemoved=true| GETQ[Get]
+  QID[/api/quotations/{id}/] -->|"GET - ?includeRemoved=true"| GETQ[Get]
   QID -->|PUT| UPDATE[Update/Finalize]
   QID -->|DELETE| DEL[Delete]
   QID -->|POST/PUT| LINK[link-catalogs]

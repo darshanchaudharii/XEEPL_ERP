@@ -82,19 +82,20 @@ Quotation UI flow (draft to finalized)
 ```mermaid
 flowchart TD
   A[Open Make Quotation] --> B[Select/Create Quotation]
-  B --> C[Assign Customer<br/>PUT /quotations/{id}]
+  B --> C["Assign Customer - PUT /quotations/{id}"]
   C --> D[Add Item lines]
   D --> E[Add Raw lines under last Item]
   D --> D1[Inline edit Qty/Rate]
   E --> E1[Inline edit Qty/Rate]
-  D --> D2[Soft delete line<br/>PATCH /lines/{id}/remove]
-  E --> E2[Soft delete raw<br/>PATCH /lines/{id}/remove]
-  D2 --> F[Toggle 'Show removed raws']
+  D --> D2["Soft delete line - PATCH /lines/{id}/remove"]
+  E --> E2["Soft delete raw - PATCH /lines/{id}/remove"]
+  D2 --> F["Toggle Show removed raws - GET /quotations/{id}?includeRemoved=true"]
   E2 --> F
   F --> G[Removed raws appear inline (a, b, ...)]
-  G --> H[Manage Linked Catalogs]
-  H --> I[Finalize & Save]
-  I --> K[Download PDF (matches table)]
+  G --> H["Manage Linked Catalogs - POST/PUT /quotations/{id}/link-catalogs"]
+  H --> I["Finalize & Save - PUT /quotations/{id} (FINALIZED)"]
+  I --> J[Snapshot stored (audit)]
+  J --> K[Download PDF (matches table ordering)]
 ```
 
 ## 🧪 Commands
