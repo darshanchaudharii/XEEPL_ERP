@@ -3,6 +3,7 @@ package com.xeepl.erp.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "items")
@@ -39,6 +40,9 @@ public class Item {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @OneToMany(mappedBy = "parentItem", fetch = FetchType.LAZY)
+    private List<RawMaterial> rawMaterials;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -55,4 +59,5 @@ public class Item {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
 }

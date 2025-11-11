@@ -129,6 +129,18 @@
   background-color: #2980b9;
 }
 
+.btn-assign.success {
+  background-color: #2ecc71;
+  box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7);
+  animation: pulse-assign 0.8s ease-out 1;
+}
+
+@keyframes pulse-assign {
+  0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); transform: translateZ(0); }
+  70% { box-shadow: 0 0 0 10px rgba(46, 204, 113, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+}
+
 .btn-unlink {
   background-color: #e74c3c;
   color: white;
@@ -189,6 +201,27 @@
   color: white;
   padding: 6px 10px;
 }
+
+.row-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.btn-xs {
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.btn-edit { background-color: #5dade2; color: #fff; }
+.btn-edit:hover { background-color: #3498db; }
+.btn-save { background-color: #27ae60; color: #fff; }
+.btn-save:hover { background-color: #229954; }
+.btn-cancel { background-color: #bdc3c7; color: #2c3e50; }
+.btn-cancel:hover { background-color: #95a5a6; }
+.btn-undo { background-color: #f39c12; color: white; padding: 6px 10px; }
+.btn-undo:hover { background-color: #e67e22; }
+.row-removed { background-color: #fdecea; }
 
 .btn-remove:hover {
   background-color: #c0392b;

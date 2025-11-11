@@ -7,28 +7,29 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica'
   },
   header: {
-    marginBottom: 20,
-    borderBottom: '2 solid #1f8a4c'
+    marginBottom: 16,
+    borderBottom: '2 solid #1f8a4c',
+    paddingBottom: 8
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#1f8a4c',
-    marginBottom: 10
+    marginBottom: 6
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#666',
     marginBottom: 5
   },
   section: {
-    marginBottom: 15
+    marginBottom: 14
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#1f8a4c',
-    marginBottom: 8,
+    marginBottom: 6,
     textDecoration: 'underline'
   },
   row: {
@@ -36,16 +37,16 @@ const styles = StyleSheet.create({
     marginBottom: 5
   },
   label: {
-    width: '30%',
+    width: '28%',
     fontWeight: 'bold',
     color: '#333'
   },
   value: {
-    width: '70%',
+    width: '72%',
     color: '#666'
   },
   table: {
-    marginTop: 15
+    marginTop: 12
   },
   tableHeader: {
     flexDirection: 'row',
@@ -57,7 +58,8 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     borderBottom: '1 solid #e0e0e0',
-    padding: 8
+    padding: 8,
+    backgroundColor: '#fff'
   },
   tableRowRaw: {
     flexDirection: 'row',
@@ -90,13 +92,13 @@ const styles = StyleSheet.create({
   grandTotalLabel: {
     width: '85%',
     textAlign: 'right',
-    fontSize: 12,
+    fontSize: 13,
     color: '#1f8a4c'
   },
   grandTotalValue: {
     width: '15%',
     textAlign: 'right',
-    fontSize: 12,
+    fontSize: 13,
     color: '#1f8a4c'
   },
   footer: {
@@ -114,6 +116,18 @@ const styles = StyleSheet.create({
 
 export const generateQuotationPDF = async (quotation, quotationLines, options = { showRawPrices: true }) => {
   const { showRawPrices } = options;
+
+  // Ensure ordering: items then children raws (a,b,...) by id asc
+  const items = (quotationLines || []).filter(l => !l.isRawMaterial);
+  const raws = (quotationLines || []).filter(l => l.isRawMaterial);
+  const orderedLines = [];
+  items.forEach(item => {
+    orderedLines.push(item);
+    raws
+      .filter(r => r.parentItemId === item.id && !r.removed)
+      .sort((a, b) => a.id - b.id)
+      .forEach(r => orderedLines.push(r));
+  });
   const MyDocument = (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -177,7 +191,7 @@ export const generateQuotationPDF = async (quotation, quotationLines, options = 
           </View>
 
           {/* Table Rows */}
-          {quotationLines
+          {orderedLines
             .filter(line => !line.isRawMaterial)
             .map((line, index) => (
               <View key={line.id}>
@@ -193,7 +207,7 @@ export const generateQuotationPDF = async (quotation, quotationLines, options = 
                 </View>
 
                 {/* Raw Material Rows */}
-                {quotationLines
+                {orderedLines
                   .filter(raw => 
                     raw.isRawMaterial && 
                     raw.parentItemId === line.id

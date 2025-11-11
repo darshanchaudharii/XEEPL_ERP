@@ -1,16 +1,22 @@
 package com.xeepl.erp.dto;
 
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
+
 import java.math.BigDecimal;
+
 @Data
 public class QuotationLineUpdateDTO {
-    private Long id;
-    @NotBlank
-    private String itemDescription;
-    @Min(1) private int quantity;
-    @DecimalMin("0.01") private BigDecimal unitPrice;
-}
+    private Long id; // optional, used to preserve removed flag on update/replace
 
+    private String itemDescription;
+
+    @Min(0)
+    private Integer quantity;
+
+    private BigDecimal unitPrice;
+
+    private Boolean isRawMaterial;
+    private Long parentItemId;
+    private Long rawId;
+}

@@ -4,7 +4,6 @@ import com.xeepl.erp.dto.*;
 import com.xeepl.erp.entity.*;
 import com.xeepl.erp.mapper.QuotationMapper;
 import com.xeepl.erp.repository.*;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,73 +15,20 @@ import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 @Service
+@RequiredArgsConstructor
 public class QuotationService {
     private final QuotationRepository quotationRepository;
     private final QuotationLineRepository quotationLineRepository;
     private final UserRepository userRepository;
     private final CatalogRepository catalogRepository;
+    private final QuotationSnapshotRepository quotationSnapshotRepository;
     private final QuotationMapper quotationMapper;
 
-    public QuotationService(QuotationRepository quotationRepository, QuotationLineRepository quotationLineRepository, UserRepository userRepository, CatalogRepository catalogRepository, QuotationMapper quotationMapper) {
-        this.catalogRepository = catalogRepository;
-        this.userRepository = userRepository;
-        this.quotationMapper = quotationMapper;
-        this.quotationRepository = quotationRepository;
-        this.quotationLineRepository = quotationLineRepository;
-    }
-    @Transactional(readOnly = true)
-    public QuotationDTO getQuotation(Long id, boolean includeRemoved) {
-        Quotation q = quotationRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Quotation not found"));
-        QuotationDTO dto = QuotationMapper.toDto(q); // reuse existing mapper but ensure it includes new fields
-        // If mapper does not filter removed raws, you can filter here:
-        if(!includeRemoved) {
-            for (QuotationLineDTO line : dto.getLines()) {
-                if(line.getIsRawMaterial() != null && line.getIsRawMaterial()) {
-                    // filter out raws with removed=true
-                    List<QuotationLineDTO> keep = line.getRawLines().stream()
-                            .filter(r -> r.getRemoved() == null || !r.getRemoved())
-                            .collect(Collectors.toList());
-                    line.setRawLines(keep);
-                }
-            }
-        }
-        return dto;
-    }
-
-    @Transactional
-    public void finalizeQuotation(Long id) {
-        Quotation q = quotationRepository.findById(id).orElseThrow();
-        q.setStatus(QuotationStatus.valueOf("FINALIZED"));
-        quotationRepository.save(q);
-    }
-
-    @Transactional
-    public QuotationLineDTO updateLine(Long lineId, Integer qty, BigDecimal rate) {
-        QuotationLine line = quotationLineRepository.findById(lineId).orElseThrow();
-        if(qty != null) line.setQuantity(qty);
-        if(rate != null) line.setUnitPrice(rate);
-        // recalc total
-        BigDecimal total = (line.getUnitPrice() != null ? line.getUnitPrice() : BigDecimal.ZERO)
-                .multiply(BigDecimal.valueOf(line.getQuantity() != null ? line.getQuantity() : 0));
-        line.setTotal(total);
-        quotationLineRepository.save(line);
-        return QuotationMapper.toLineDto(line);
-    }
-
-    @Transactional
-    public void markLineRemoved(Long lineId, boolean removed) {
-        QuotationLine line = quotationLineRepository.findById(lineId).orElseThrow();
-        line.setRemoved(removed);
-        quotationLineRepository.save(line);
-    }
-
-
-    // List all quotations
+    // 1. List all quotations
     public List<QuotationDTO> listQuotations() {
         return quotationRepository.findAll()
                 .stream()
@@ -90,14 +36,22 @@ public class QuotationService {
                 .toList();
     }
 
-    // Get a specific quotation by ID
+    // 2. Get a specific quotation by ID (all lines, including removed)
     public QuotationDTO getQuotation(Long id) {
         Quotation quotation = quotationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Quotation not found"));
-        return quotationMapper.toDto(quotation);
+        return quotationMapper.toDtoWithAllLines(quotation);
     }
 
-    // Create a new quotation
+    // 2b. Get quotation with option to include removed raw lines
+    public QuotationDTO getQuotation(Long id, boolean includeRemoved) {
+        Quotation quotation = quotationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Quotation not found"));
+        return includeRemoved ? quotationMapper.toDtoWithAllLines(quotation) : quotationMapper.toDto(quotation);
+    }
+
+    // 3. Create a new quotation with lines
+    @Transactional
     public QuotationDTO createQuotation(QuotationCreateDTO dto) {
         Quotation quotation = new Quotation();
         quotation.setName(dto.getName());
@@ -114,15 +68,18 @@ public class QuotationService {
             quotation.setLinkedCatalogs(catalogRepository.findAllById(dto.getCatalogIds()));
         }
 
-        // Save lines
         List<QuotationLine> lines = new ArrayList<>();
         if (dto.getItems() != null && !dto.getItems().isEmpty()) {
             for (QuotationLineCreateDTO item : dto.getItems()) {
                 QuotationLine line = new QuotationLine();
                 line.setItemDescription(item.getItemDescription());
                 line.setQuantity(item.getQuantity());
-                line.setUnitPrice(item.getUnitPrice());
+                line.setUnitPrice(item.getUnitPrice() == null ? BigDecimal.ZERO : item.getUnitPrice());
                 line.setQuotation(quotation);
+                line.setIsRawMaterial(item.getIsRawMaterial() != null ? item.getIsRawMaterial() : false);
+                line.setParentItemId(item.getParentItemId());
+                line.setRawId(item.getRawId());
+                line.setRemoved(false); // on creation, lines are not removed
                 line.calculateTotal();
                 lines.add(line);
             }
@@ -130,20 +87,103 @@ public class QuotationService {
         quotation.setItems(lines);
 
         Quotation saved = quotationRepository.save(quotation);
-        return quotationMapper.toDto(saved);
+        return quotationMapper.toDtoWithAllLines(saved);
     }
+
+    // 4. Update an existing quotation (replace lines, keep removed flag if needed)
+    @Transactional
+    public QuotationDTO updateQuotation(Long id, QuotationUpdateDTO dto) {
+        Quotation quotation = quotationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Quotation not found"));
+
+        quotation.setName(dto.getName());
+        quotation.setDate(dto.getDate());
+        quotation.setExpiryDate(dto.getExpiryDate());
+        if (dto.getStatus() != null)
+            quotation.setStatus(QuotationStatus.valueOf(dto.getStatus()));
+
+        if (dto.getCustomerId() != null) {
+            User customer = userRepository.findById(dto.getCustomerId()).orElse(null);
+            quotation.setCustomer(customer);
+        }
+
+        if (dto.getCatalogIds() != null) {
+            quotation.setLinkedCatalogs(catalogRepository.findAllById(dto.getCatalogIds()));
+        }
+
+        // Replace lines, preserving removed flag on existing lines where possible
+        quotation.getItems().clear();
+        List<QuotationLine> updatedLines = new ArrayList<>();
+        if (dto.getItems() != null && !dto.getItems().isEmpty()) {
+            for (QuotationLineUpdateDTO item : dto.getItems()) {
+                QuotationLine line = new QuotationLine();
+
+                // KEEP REMOVED STATE if such line already exists:
+                if (item.getId() != null) {
+                    QuotationLine old = quotationLineRepository.findById(item.getId()).orElse(null);
+                    if (old != null && Boolean.TRUE.equals(old.getRemoved())) {
+                        line.setRemoved(true);
+                    }
+                }
+                line.setItemDescription(item.getItemDescription());
+                line.setQuantity(item.getQuantity());
+                line.setUnitPrice(item.getUnitPrice() == null ? BigDecimal.ZERO : item.getUnitPrice());
+                line.setQuotation(quotation);
+                line.setIsRawMaterial(item.getIsRawMaterial() != null ? item.getIsRawMaterial() : false);
+                line.setParentItemId(item.getParentItemId());
+                line.setRawId(item.getRawId());
+                line.calculateTotal();
+
+                updatedLines.add(line);
+            }
+        }
+        quotation.getItems().addAll(updatedLines);
+
+        Quotation saved = quotationRepository.save(quotation);
+        return quotationMapper.toDtoWithAllLines(saved);
+    }
+
+    // 5. Mark a QuotationLine as removed (soft delete)
+    @Transactional
+    public void markLineRemoved(Long lineId) {
+        QuotationLine line = quotationLineRepository.findById(lineId).orElseThrow();
+        line.setRemoved(true);
+        quotationLineRepository.save(line);
+    }
+
+    // 6. Restore a previously removed QuotationLine
+    @Transactional
+    public void restoreRemovedLine(Long lineId) {
+        QuotationLine line = quotationLineRepository.findById(lineId).orElseThrow();
+        line.setRemoved(false);
+        quotationLineRepository.save(line);
+    }
+
+    // 7. Edit a Quotation line (qty, price, description, etc.)
+    @Transactional
+    public QuotationLineDTO editLine(Long lineId, QuotationLineUpdateDTO dto) {
+        QuotationLine line = quotationLineRepository.findById(lineId).orElseThrow();
+        if (dto.getQuantity() != null) line.setQuantity(dto.getQuantity());
+        if (dto.getUnitPrice() != null) line.setUnitPrice(dto.getUnitPrice());
+        if (dto.getItemDescription() != null) line.setItemDescription(dto.getItemDescription());
+        // extend to other fields as needed
+        line.calculateTotal();
+        QuotationLine saved = quotationLineRepository.save(line);
+        return quotationMapper.toLineDto(saved);
+    }
+
+    // 8. Link catalogs to a quotation
+    @Transactional
     public QuotationDTO linkCatalogsToQuotation(Long quotationId, List<Long> catalogIds) {
         Quotation quotation = quotationRepository.findById(quotationId)
                 .orElseThrow(() -> new RuntimeException("Quotation not found"));
-
         List<Catalog> catalogs = catalogRepository.findAllById(catalogIds);
         quotation.setLinkedCatalogs(catalogs);
-
         Quotation saved = quotationRepository.save(quotation);
         return quotationMapper.toDto(saved);
     }
-    // download linked catalogs as ZIP
 
+    // 9. Download linked catalogs as ZIP file
     public void downloadCatalogsAsZip(Long quotationId, HttpServletResponse response) throws IOException {
         Quotation quotation = quotationRepository.findById(quotationId)
                 .orElseThrow(() -> new RuntimeException("Quotation not found"));
@@ -165,51 +205,51 @@ public class QuotationService {
         }
     }
 
-
-
-    // Update an existing quotation
-    public QuotationDTO updateQuotation(Long id, QuotationUpdateDTO dto) {
+    // 10. Finalize quotation (make immutable to normal edit flow) and snapshot
+    @Transactional
+    public QuotationDTO finalizeQuotation(Long id) {
         Quotation quotation = quotationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Quotation not found"));
-
-        quotation.setName(dto.getName());
-        quotation.setDate(dto.getDate());
-        quotation.setExpiryDate(dto.getExpiryDate());
-        if (dto.getStatus() != null) {
-            quotation.setStatus(QuotationStatus.valueOf(dto.getStatus()));
-        }
-
-        if (dto.getCustomerId() != null) {
-            User customer = userRepository.findById(dto.getCustomerId()).orElse(null);
-            quotation.setCustomer(customer);
-        }
-
-        if (dto.getCatalogIds() != null) {
-            quotation.setLinkedCatalogs(catalogRepository.findAllById(dto.getCatalogIds()));
-        }
-
-        // Replace lines with new ones (orphanRemoval=true works)
-        quotation.getItems().clear();
-        List<QuotationLine> updatedLines = new ArrayList<>();
-        if (dto.getItems() != null && !dto.getItems().isEmpty()) {
-            for (QuotationLineUpdateDTO item : dto.getItems()) {
-                QuotationLine line = new QuotationLine();
-                line.setItemDescription(item.getItemDescription());
-                line.setQuantity(item.getQuantity());
-                line.setUnitPrice(item.getUnitPrice());
-                line.setQuotation(quotation);
-                line.calculateTotal();
-                updatedLines.add(line);
-            }
-        }
-        quotation.getItems().addAll(updatedLines);
-
+        quotation.setStatus(QuotationStatus.FINALIZED);
         Quotation saved = quotationRepository.save(quotation);
-        return quotationMapper.toDto(saved);
+
+        // snapshot lines (simple JSON string snapshot to avoid schema sprawl)
+        // Compose a minimal JSON manually (no extra deps)
+        StringBuilder json = new StringBuilder();
+        json.append("{\"quotationId\":").append(saved.getId()).append(",\"lines\":[");
+        List<QuotationLine> lines = saved.getItems();
+        for (int i = 0; i < lines.size(); i++) {
+            QuotationLine l = lines.get(i);
+            json.append("{")
+                    .append("\"id\":").append(l.getId()).append(",")
+                    .append("\"desc\":\"").append(escapeJson(l.getItemDescription())).append("\",")
+                    .append("\"qty\":").append(l.getQuantity()).append(",")
+                    .append("\"unitPrice\":\"").append(l.getUnitPrice()).append("\",")
+                    .append("\"total\":\"").append(l.getTotal()).append("\",")
+                    .append("\"isRaw\":").append(Boolean.TRUE.equals(l.getIsRawMaterial())).append(",")
+                    .append("\"parentId\":").append(l.getParentItemId() == null ? "null" : l.getParentItemId()).append(",")
+                    .append("\"rawId\":").append(l.getRawId() == null ? "null" : l.getRawId()).append(",")
+                    .append("\"removed\":").append(Boolean.TRUE.equals(l.getRemoved()))
+                    .append("}");
+            if (i < lines.size() - 1) json.append(",");
+        }
+        json.append("]}");
+
+        QuotationSnapshot snapshot = new QuotationSnapshot();
+        snapshot.setQuotationId(saved.getId());
+        snapshot.setPayloadJson(json.toString());
+        quotationSnapshotRepository.save(snapshot);
+
+        return quotationMapper.toDtoWithAllLines(saved);
     }
 
+    private String escapeJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
 
-    // Delete a quotation by ID
+    // 11. Delete a quotation by ID
+    @Transactional
     public void deleteQuotation(Long id) {
         quotationRepository.deleteById(id);
     }

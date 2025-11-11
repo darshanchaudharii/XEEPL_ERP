@@ -1,106 +1,64 @@
 # XEEPL ERP Frontend
 
-Enterprise Resource Planning System Frontend built with React and Vite.
+React + Vite frontend for the XEEPL ERP. It provides master screens and a rich Quotation module with nested raw materials, inline editing, and PDF export that matches the web view.
 
-## Features
+## 🔧 Prerequisites
+- Node.js 18+
+- Backend API at `http://localhost:8080` (or use the dev proxy)
 
-- **User Management**: Create, update, and manage users with roles and permissions
-- **Section Master**: Manage different sections of content
-- **Content Master**: Handle dynamic content with categories and subcategories
-- **Item Master**: Inventory management for items
-- **Raw Materials**: Track and manage raw materials
-- **Catalog Management**: Digital catalog management with file uploads
-- **Quotations**: Create, manage, and finalize quotations
-- **Make Quotation**: Interactive quotation creation interface
-
-## Tech Stack
-
-- **React 19**: Latest React with hooks
-- **Vite**: Fast build tool and dev server
-- **React Router**: Client-side routing
-- **FontAwesome**: Icon library
-- **CSS3**: Modern styling with flexbox and grid
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js (v16 or higher)
-- npm or yarn
-- Backend API running on `http://localhost:8080`
-
-### Installation
-
-1. Clone the repository
-2. Install dependencies:
+## 🚀 Run
 ```bash
 npm install
-```
-
-3. Start the development server:
-```bash
 npm run dev
+# http://localhost:5173
 ```
 
-The application will be available at `http://localhost:5174`
+Dev proxy (see `vite.config.js`) forwards `/api` to the backend to avoid CORS issues.
 
-### API Configuration
-
-The frontend is configured to proxy API requests to the backend during development. The proxy is configured in `vite.config.js`:
-
-```js
-server: {
-  proxy: {
-    '/api': {
-      target: 'http://localhost:8080',
-      changeOrigin: true,
-      secure: false,
-    }
-  }
-}
-```
-
-This solves CORS issues during development by routing all `/api/*` requests through the Vite dev server to the backend.
-
-## Project Structure
-
+## 🗂️ Structure
 ```
 src/
-├── components/         # React components
-│   ├── common/        # Shared components (Navbar, Footer, etc.)
-│   ├── users/         # User management
-│   ├── sections/      # Section management
-│   ├── contents/      # Content management
-│   ├── items/         # Item management
-│   ├── rawmaterials/  # Raw material management
-│   ├── catalogs/      # Catalog management
-│   ├── quotations/    # Quotation management
-│   └── home/          # Home page
-├── services/          # API service layer
-├── styles/            # CSS files
-├── utils/             # Utility functions and constants
-├── App.jsx            # Main application component
-└── main.jsx           # Application entry point
+├── components/
+│   ├── common/
+│   ├── users/
+│   ├── sections/
+│   ├── contents/
+│   ├── items/
+│   ├── rawmaterials/
+│   ├── catalogs/
+│   └── quotations/      # MakeQuotation, QuotationView, QuotationMaster
+├── services/            # API layer (quotationService, api.js with GET/POST/PUT/PATCH/DELETE)
+├── styles/
+├── utils/               # pdfGenerator, constants
+├── App.jsx
+└── main.jsx
 ```
 
-## Available Scripts
+## ✨ Quotation module (how to use)
+1) Go to Make Quotation. Select an existing quotation or create one.
+2) Assign Customer: pick a customer and click Assign (persists to backend).
+3) Add lines:
+   - Add Item (main row).  
+   - Add Raw — attaches under the most recent Item as a), b), …
+4) Edit inline: click Edit on an Item/Raw to change Qty/Rate; Save/Cancel.
+5) Remove/Undo raws: remove a raw; toggle “Show removed raws” to reveal it inline under its parent; click Undo to restore.
+6) Manage Linked Catalogs: open modal, select catalogs, Save & Assign; optionally download ZIP from the view page.
+7) Finalize & Save: sets status FINALIZED and snapshots the quotation.
+8) Download PDF: mirrors the current table layout (items then raws).
 
-- `npm run dev`: Start development server
-- `npm run build`: Build for production
-- `npm run preview`: Preview production build
-- `npm run lint`: Run ESLint
+## 🧪 Commands
+- `npm run dev` – start dev server
+- `npm run build` – production build
+- `npm run preview` – preview production build
+- `npm run lint` – run ESLint
 
-## Environment Setup
+## 📸 Screens
+The main repository root README includes annotated screenshots:
+- Make Quotation (draft)
+- View Quotation (finalized)
+- Show Removed Raws
+- Quotation PDF
+- Masters (User, Section, Content, Item, Raw, Catalog)
 
-Make sure your backend API is running on `http://localhost:8080` before starting the frontend.
-
-## Contributing
-
-1. Follow the existing code structure
-2. Use functional components with hooks
-3. Maintain consistent styling
-4. Write clean, readable code
-
-## License
-
-© 2025 XEEPL ERP. All rights reserved.
+## 📄 License
+MIT (see project root). © 2025 XEEPL ERP.

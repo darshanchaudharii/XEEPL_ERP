@@ -243,6 +243,37 @@
   justify-content: center;
 }
 
+/* Table tweaks for actions */
+.quotation-table th.th-actions {
+  width: 120px;
+}
+
+.row-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.btn-xs {
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.btn-edit { background-color: #5dade2; color: #fff; }
+.btn-edit:hover { background-color: #3498db; }
+.btn-save { background-color: #27ae60; color: #fff; }
+.btn-save:hover { background-color: #229954; }
+.btn-cancel { background-color: #bdc3c7; color: #2c3e50; }
+.btn-cancel:hover { background-color: #95a5a6; }
+.btn-delete { background-color: #e74c3c; color: #fff; }
+.btn-delete:hover { background-color: #c0392b; }
+.btn-undo { background-color: #f39c12; color: #fff; }
+.btn-undo:hover { background-color: #e67e22; }
+
+.row-removed {
+  background-color: #fdecea;
+}
+
 /* Action Buttons Section */
 .action-buttons-section {
   display: flex;

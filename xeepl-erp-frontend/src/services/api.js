@@ -131,6 +131,17 @@ export const putFormData = (endpoint, formData) => {
   });
 };
 
+// PATCH request with JSON body
+export const patch = (endpoint, data) => {
+  return fetchAPI(endpoint, {
+    method: 'PATCH',
+    headers: data instanceof FormData ? {} : {
+      'Content-Type': 'application/json'
+    },
+    body: data instanceof FormData ? data : JSON.stringify(data)
+  });
+};
+
 // DELETE request
 export const del = (endpoint) => {
   return fetchAPI(endpoint, {

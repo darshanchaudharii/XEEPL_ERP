@@ -10,6 +10,14 @@ import java.util.stream.Collectors;
 public class QuotationMapper {
 
     public QuotationDTO toDto(Quotation quotation) {
+        return toDtoInternal(quotation, false);
+    }
+
+    public QuotationDTO toDtoWithAllLines(Quotation quotation) {
+        return toDtoInternal(quotation, true);
+    }
+
+    private QuotationDTO toDtoInternal(Quotation quotation, boolean includeRemoved) {
         QuotationDTO dto = new QuotationDTO();
         dto.setId(quotation.getId());
         dto.setName(quotation.getName());
@@ -34,15 +42,24 @@ public class QuotationMapper {
                     return c;
                 }).collect(Collectors.toList()));
         dto.setItems(quotation.getItems().stream()
+                .filter(line -> includeRemoved || !Boolean.TRUE.equals(line.getRemoved()))
                 .map(line -> {
-                    QuotationLineDTO l = new QuotationLineDTO();
-                    l.setId(line.getId());
-                    l.setItemDescription(line.getItemDescription());
-                    l.setQuantity(line.getQuantity());
-                    l.setUnitPrice(line.getUnitPrice());
-                    l.setTotal(line.getTotal());
-                    return l;
+                    return toLineDto(line);
                 }).collect(Collectors.toList()));
         return dto;
+    }
+
+    public QuotationLineDTO toLineDto(QuotationLine line) {
+        QuotationLineDTO l = new QuotationLineDTO();
+        l.setId(line.getId());
+        l.setItemDescription(line.getItemDescription());
+        l.setQuantity(line.getQuantity());
+        l.setUnitPrice(line.getUnitPrice());
+        l.setTotal(line.getTotal());
+        l.setIsRawMaterial(line.getIsRawMaterial());
+        l.setParentItemId(line.getParentItemId());
+        l.setRawId(line.getRawId());
+        l.setRemoved(line.getRemoved());
+        return l;
     }
 }

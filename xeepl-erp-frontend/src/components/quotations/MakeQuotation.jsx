@@ -37,40 +37,74 @@ const MakeQuotation = () => {
   const [activeTab, setActiveTab] = useState('items');
   const [catalogModalOpen, setCatalogModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [assignSuccess, setAssignSuccess] = useState(false);
+  const [assignedCustomerId, setAssignedCustomerId] = useState('');
   const [catalogFilter, setCatalogFilter] = useState('');
-const [removedLines, setRemovedLines] = useState([]);
-const handleRemoveLine = (lineId) => {
-  const lineToRemove = quotationLines.find(line => line.id === lineId);
-  if (lineToRemove) {
-    setRemovedLines(prev => [...prev, { ...lineToRemove, removedAt: Date.now() }]);
-    setQuotationLines(prev => prev.filter(line => line.id !== lineId));
-  }
-};
-const handleUndoRemove = (lineId) => {
-  const lineToRestore = removedLines.find(line => line.id === lineId);
-  if (lineToRestore) {
-    const restoredLine = { ...lineToRestore };
-    setQuotationLines(prev => [...prev, restoredLine]);
-    setRemovedLines(prev => prev.filter(line => line.id !== lineId));
-  }
-};
-// Add this handler function near other handlers
-const handleDecrementQuantity = (lineId) => {
-  setQuotationLines(prev => {
-    const updated = prev.map(line => {
-      if (line.id === lineId && line.quantity > 1) {
-        const newQuantity = line.quantity - 1;
+  const [removedLines, setRemovedLines] = useState([]);
+  const [editingLineId, setEditingLineId] = useState(null);
+  const [editQty, setEditQty] = useState('');
+  const [editRate, setEditRate] = useState('');
+
+  const handleRemoveLine = (lineId) => {
+    const lineToRemove = quotationLines.find(line => line.id === lineId);
+    if (lineToRemove) {
+      setRemovedLines(prev => [...prev, { ...lineToRemove, removedAt: Date.now(), removed: true }]);
+      setQuotationLines(prev => prev.filter(line => line.id !== lineId));
+    }
+  };
+  const handleUndoRemove = (lineId) => {
+    const lineToRestore = removedLines.find(line => line.id === lineId);
+    if (lineToRestore) {
+      const restoredLine = { ...lineToRestore };
+      delete restoredLine.removed;
+      setQuotationLines(prev => [...prev, restoredLine]);
+      setRemovedLines(prev => prev.filter(line => line.id !== lineId));
+    }
+  };
+  // decrement one quantity
+  const handleDecrementQuantity = (lineId) => {
+    setQuotationLines(prev => {
+      const updated = prev.map(line => {
+        if (line.id === lineId && line.quantity > 1) {
+          const newQuantity = line.quantity - 1;
+          return {
+            ...line,
+            quantity: newQuantity,
+            total: newQuantity * line.unitPrice
+          };
+        }
+        return line;
+      });
+      return updated;
+    });
+  };
+  // inline edit
+  const startEdit = (line) => {
+    setEditingLineId(line.id);
+    setEditQty(String(line.quantity));
+    setEditRate(String(line.unitPrice));
+  };
+  const cancelEdit = () => {
+    setEditingLineId(null);
+    setEditQty('');
+    setEditRate('');
+  };
+  const saveEdit = (lineId) => {
+    const qty = Math.max(1, Number(editQty) || 1);
+    const rate = Number(editRate) || 0;
+    setQuotationLines(prev => prev.map(line => {
+      if (line.id === lineId) {
         return {
           ...line,
-          quantity: newQuantity,
-          total: newQuantity * line.unitPrice
+          quantity: qty,
+          unitPrice: rate,
+          total: qty * rate
         };
       }
       return line;
-    });
-    return updated;
-  });
-};
+    }));
+    cancelEdit();
+  };
 
   useEffect(() => {
     fetchInitialData();
@@ -137,7 +171,8 @@ const handleDecrementQuantity = (lineId) => {
     try {
       const quotation = await quotationService.getQuotationById(qId);
       // Enrich quotation lines with itemId by matching with items list
-      const enrichedLines = (quotation.items || []).map(line => {
+      const allLines = (quotation.items || []);
+      const enrichedLines = allLines.filter(l => !l.removed).map(line => {
         // If itemId is missing, try to find it by matching itemDescription
         if (!line.itemId && line.itemDescription) {
           const matchedItem = items.find(i => 
@@ -162,8 +197,11 @@ const handleDecrementQuantity = (lineId) => {
         }
         return line;
       });
+      const removed = allLines.filter(l => l.removed).map(l => ({ ...l, removed: true }));
       setQuotationLines(enrichedLines);
+      setRemovedLines(removed);
       setCustomerId(quotation.customer?.id || '');
+      setAssignedCustomerId(quotation.customer?.id || '');
       setSelectedCatalogs(quotation.linkedCatalogs?.map(c => c.id) || []);
     } catch (err) {
       setError('Failed to load quotation: ' + err.message);
@@ -197,7 +235,7 @@ const handleDecrementQuantity = (lineId) => {
     }
   };
 
-  const handleAssignCustomer = () => {
+  const handleAssignCustomer = async () => {
     if (!quotationId) {
       setError('Please select a quotation first');
       return;
@@ -206,7 +244,22 @@ const handleDecrementQuantity = (lineId) => {
       setError('Please select a customer');
       return;
     }
-    // Customer is assigned - will be saved when finalizing
+    try {
+      setLoading(true);
+      setError('');
+      await quotationService.assignCustomer(quotationId, customerId);
+      setAssignSuccess(true);
+      // refresh selected quotation minimal fields
+      const quotation = await quotationService.getQuotationById(quotationId);
+      setCustomerId(quotation.customer?.id || '');
+      setAssignedCustomerId(quotation.customer?.id || '');
+      // auto-hide success effect
+      setTimeout(() => setAssignSuccess(false), 1200);
+    } catch (err) {
+      setError('Failed to assign customer: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUnlinkCustomer = () => {
@@ -385,8 +438,12 @@ const handleDownloadPDF = async () => {
 
   try {
     setLoading(true);
-    const quotation = await quotationService.getQuotationById(quotationId);
-    await downloadQuotationPDF(quotation, quotationLines, { showRawPrices });
+    const quotation = await quotationService.getQuotationByIdWithRemoved(quotationId, showRemovedRaws);
+    const allLines = [
+      ...quotationLines,
+      ...(showRemovedRaws ? removedLines : [])
+    ];
+    await downloadQuotationPDF(quotation, allLines, { showRawPrices });
   } catch (err) {
     setError('Failed to generate PDF: ' + err.message);
   } finally {
@@ -463,20 +520,20 @@ const handleDownloadPDF = async () => {
                     </option>
                   ))}
                 </select>
-                {!customerId && (
+                {!assignedCustomerId && (
                   <p className="no-customer">No customer assigned</p>
                 )}
-                {customerId && (
+                {assignedCustomerId && (
                   <p className="customer-assigned">
                     <i className="fas fa-check"></i>
-                    {selectedCustomer?.fullName}
+                    {customers.find(c => c.id === Number(assignedCustomerId))?.fullName}
                   </p>
                 )}
                 <div className="customer-actions">
                   <button 
-                    className="btn btn-assign"
+                    className={`btn btn-assign${assignSuccess ? ' success' : ''}`}
                     onClick={handleAssignCustomer}
-                    disabled={!customerId}
+                    disabled={!customerId || loading}
                   >
                     <i className="fas fa-link"></i>
                     Assign
@@ -743,80 +800,109 @@ const handleDownloadPDF = async () => {
                                   </div>
                                 </div>
                               </td>
-                              <td>{line.quantity}</td>
-                              <td>₹{Number(line.unitPrice).toFixed(2)}</td>
+                              <td>
+                                {editingLineId === line.id ? (
+                                  <input type="number" value={editQty} onChange={(e) => setEditQty(e.target.value)} min="1" />
+                                ) : (
+                                  line.quantity
+                                )}
+                              </td>
+                              <td>
+                                {editingLineId === line.id ? (
+                                  <input type="number" value={editRate} onChange={(e) => setEditRate(e.target.value)} step="0.01" />
+                                ) : (
+                                  `₹${Number(line.unitPrice).toFixed(2)}`
+                                )}
+                              </td>
                               <td>₹{Number(line.total || (line.quantity * line.unitPrice)).toFixed(2)}</td>
                               <td>
-                                {line.quantity > 1 ? (
-                                  <div style={{ display: 'flex', gap: '5px' }}>
-                                    <button 
-                                      className="btn btn-remove"
-                                      onClick={() => handleDecrementQuantity(line.id)}
-                                      title="Remove one item"
-                                    >
-                                      <i className="fas fa-minus"></i>
-                                    </button>
-                                    <button 
-                                      className="btn btn-delete"
-                                      onClick={() => handleRemoveLine(line.id)}
-                                      title="Remove all"
-                                    >
-                                      <i className="fas fa-trash"></i>
-                                      All
-                                    </button>
+                                {editingLineId === line.id ? (
+                                  <div className="row-actions">
+                                    <button className="btn btn-xs btn-save" onClick={() => saveEdit(line.id)} title="Save"><i className="fas fa-check"></i></button>
+                                    <button className="btn btn-xs btn-cancel" onClick={cancelEdit} title="Cancel"><i className="fas fa-times"></i></button>
                                   </div>
                                 ) : (
-                                  <button 
-                                    className="btn btn-remove"
-                                    onClick={() => handleRemoveLine(line.id)}
-                                    title="Remove item"
-                                  >
-                                    <i className="fas fa-trash"></i>
-                                  </button>
+                                  <div className="row-actions">
+                                    {line.quantity > 1 && (
+                                      <button 
+                                        className="btn btn-xs btn-minus"
+                                        onClick={() => handleDecrementQuantity(line.id)}
+                                        title="Remove one item"
+                                      >
+                                        <i className="fas fa-minus"></i>
+                                      </button>
+                                    )}
+                                    <button className="btn btn-xs btn-edit" onClick={() => startEdit(line)} title="Edit"><i className="fas fa-pen"></i></button>
+                                    <button 
+                                      className="btn btn-xs btn-delete"
+                                      onClick={() => handleRemoveLine(line.id)}
+                                      title="Remove"
+                                    >
+                                      <i className="fas fa-trash"></i>
+                                    </button>
+                                  </div>
                                 )}
                               </td>
                             </tr>
                             {
-                              quotationLines
-                                .filter(raw => raw.isRawMaterial && raw.parentItemId === line.id)
+                              [
+                                ...quotationLines.filter(raw => raw.isRawMaterial && raw.parentItemId === line.id).map(r => ({...r, _removed:false})),
+                                ...(showRemovedRaws ? removedLines.filter(raw => raw.isRawMaterial && raw.parentItemId === line.id).map(r => ({...r, _removed:true})) : [])
+                              ]
+                                .sort((a,b) => a.id - b.id)
                                 .map((raw, rawIndex) => (
-                                  <tr key={raw.id}>
+                                  <tr key={`${raw._removed?'removed-':''}${raw.id}`} className={raw._removed ? 'row-removed' : ''}>
                                     <td></td>
                                     <td style={{ paddingLeft: 24 }}>
-                                      {String.fromCharCode(97 + rawIndex)}) {raw.itemDescription}
+                                      {String.fromCharCode(97 + rawIndex)}) {raw._removed ? <><s>{raw.itemDescription}</s> <em>(Removed)</em></> : raw.itemDescription}
                                     </td>
-                                    <td>{raw.quantity}</td>
                                     <td>
-                                      {showRawPrices ? `₹${Number(raw.unitPrice).toFixed(2)}` : '—'}
+                                      {editingLineId === raw.id && !raw._removed ? (
+                                        <input type="number" value={editQty} onChange={(e) => setEditQty(e.target.value)} min="1" />
+                                      ) : (
+                                        raw._removed ? <s>{raw.quantity}</s> : raw.quantity
+                                      )}
+                                    </td>
+                                    <td>
+                                      {showRawPrices ? (
+                                        editingLineId === raw.id && !raw._removed ? (
+                                          <input type="number" value={editRate} onChange={(e) => setEditRate(e.target.value)} step="0.01" />
+                                        ) : (
+                                          raw._removed ? <s>₹{Number(raw.unitPrice).toFixed(2)}</s> : `₹${Number(raw.unitPrice).toFixed(2)}`
+                                        )
+                                      ) : '—'}
                                     </td>
                                     <td>—</td>
                                     <td>
-                                      {raw.quantity > 1 ? (
-                                        <div style={{ display: 'flex', gap: '5px' }}>
-                                          <button
-                                            className="btn btn-remove"
-                                            onClick={() => handleDecrementQuantity(raw.id)}
-                                            title="Remove one raw"
-                                          >
-                                            <i className="fas fa-minus"></i>
-                                          </button>
-                                          <button
-                                            className="btn btn-delete"
-                                            onClick={() => handleRemoveLine(raw.id)}
-                                            title="Remove all"
-                                          >
-                                            <i className="fas fa-trash"></i>
-                                            All
-                                          </button>
+                                      {raw._removed ? (
+                                        <div className="row-actions">
+                                          <button className="btn btn-xs btn-undo" onClick={() => handleUndoRemove(raw.id)} title="Undo"><i className="fas fa-undo"></i></button>
+                                        </div>
+                                      ) : editingLineId === raw.id ? (
+                                        <div className="row-actions">
+                                          <button className="btn btn-xs btn-save" onClick={() => saveEdit(raw.id)} title="Save"><i className="fas fa-check"></i></button>
+                                          <button className="btn btn-xs btn-cancel" onClick={cancelEdit} title="Cancel"><i className="fas fa-times"></i></button>
                                         </div>
                                       ) : (
-                                        <button
-                                          className="btn btn-remove"
-                                          onClick={() => handleRemoveLine(raw.id)}
-                                          title="Remove raw"
-                                        >
-                                          <i className="fas fa-trash"></i>
-                                        </button>
+                                        <div className="row-actions">
+                                          {raw.quantity > 1 && (
+                                            <button
+                                              className="btn btn-xs btn-minus"
+                                              onClick={() => handleDecrementQuantity(raw.id)}
+                                              title="Remove one raw"
+                                            >
+                                              <i className="fas fa-minus"></i>
+                                            </button>
+                                          )}
+                                          <button className="btn btn-xs btn-edit" onClick={() => startEdit(raw)} title="Edit"><i className="fas fa-pen"></i></button>
+                                          <button
+                                            className="btn btn-xs btn-delete"
+                                            onClick={() => handleRemoveLine(raw.id)}
+                                            title="Remove"
+                                          >
+                                            <i className="fas fa-trash"></i>
+                                          </button>
+                                        </div>
                                       )}
                                     </td>
                                   </tr>
@@ -824,30 +910,6 @@ const handleDownloadPDF = async () => {
                             }
                           </React.Fragment>
                         ))}
-
-                      {showRemovedRaws && removedLines.length > 0 && removedLines.map((line, idx) => (
-                        <tr key={`removed-${line.id}`} style={{ backgroundColor: '#ffe5e5', opacity: 0.9 }}>
-                          <td>{quotationLines.length + idx + 1}</td>
-                          <td>
-                            <s>{line.itemDescription}</s>
-                            <span style={{ color: '#e74c3c', marginLeft: 10 }}>(Removed)</span>
-                          </td>
-                          <td><s>{line.quantity}</s></td>
-                          <td><s>₹{Number(line.unitPrice).toFixed(2)}</s></td>
-                          <td><s>₹{Number(line.total || (line.quantity * line.unitPrice)).toFixed(2)}</s></td>
-                          <td>
-                            <button 
-                              className="btn btn-undo"
-                              onClick={() => handleUndoRemove(line.id)}
-                              title="Undo remove"
-                              style={{ backgroundColor: '#f39c12', color: 'white' }}
-                            >
-                              <i className="fas fa-undo"></i>
-                              Undo
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
                     </>
                   )}
                   <tr className="grand-total-row">
@@ -984,7 +1046,7 @@ const handleDownloadPDF = async () => {
               disabled={loading}
             >
               <i className="fas fa-save"></i>
-              Save & Finalize
+              Save & Assign
             </button>
           </div>
         </div>

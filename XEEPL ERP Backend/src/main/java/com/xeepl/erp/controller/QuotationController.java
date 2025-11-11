@@ -8,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -25,8 +24,11 @@ public class QuotationController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<QuotationDTO> getQuotation(@PathVariable Long id) {
-        return ResponseEntity.ok(service.getQuotation(id));
+    public ResponseEntity<QuotationDTO> getQuotation(
+            @PathVariable Long id,
+            @RequestParam(name = "includeRemoved", defaultValue = "false") boolean includeRemoved
+    ) {
+        return ResponseEntity.ok(service.getQuotation(id, includeRemoved));
     }
 
     @PostMapping
@@ -61,33 +63,40 @@ public class QuotationController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/{id}")
-    public QuotationDTO get(@PathVariable Long id, @RequestParam(name="includeRemoved", defaultValue="false") boolean includeRemoved) {
-        return service.getQuotation(id, includeRemoved);
-    }
-
-    @PostMapping("/{id}/finalize")
-    public ResponseEntity<Void> finalize(@PathVariable Long id) {
-        service.finalizeQuotation(id);
-        return ResponseEntity.ok().build();
-    }
-
+    // Edit single line
     @PatchMapping("/lines/{lineId}")
-    public QuotationLineDTO patchLine(@PathVariable Long lineId, @RequestBody Map<String, Object> payload) {
-        Integer qty = payload.containsKey("quantity") ? (Integer) payload.get("quantity") : null;
-        BigDecimal rate = payload.containsKey("unitPrice") ? new BigDecimal(payload.get("unitPrice").toString()) : null;
-        return service.updateLine(lineId, qty, rate);
+    public ResponseEntity<QuotationLineDTO> editLine(
+            @PathVariable Long lineId,
+            @Valid @RequestBody QuotationLineUpdateDTO dto
+    ) {
+        return ResponseEntity.ok(service.editLine(lineId, dto));
     }
 
-    @PostMapping("/lines/{lineId}/remove")
+    // Remove/undo a raw line (soft delete)
+    @PatchMapping("/lines/{lineId}/remove")
     public ResponseEntity<Void> removeLine(@PathVariable Long lineId) {
-        service.markLineRemoved(lineId, true);
-        return ResponseEntity.ok().build();
+        service.markLineRemoved(lineId);
+        return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/lines/{lineId}/undo")
+    @PatchMapping("/lines/{lineId}/undo")
     public ResponseEntity<Void> undoRemoveLine(@PathVariable Long lineId) {
-        service.markLineRemoved(lineId, false);
-        return ResponseEntity.ok().build();
+        service.restoreRemovedLine(lineId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Finalize quotation and snapshot
+    @PostMapping("/{id}/finalize")
+    public ResponseEntity<QuotationDTO> finalizeQuotation(@PathVariable Long id) {
+        return ResponseEntity.ok(service.finalizeQuotation(id));
+    }
+
+    // Export PDF stub (return 204 here; wire actual PDF generation later)
+    @GetMapping("/{id}/export-pdf")
+    public void exportPdf(@PathVariable Long id, HttpServletResponse response) throws IOException {
+        response.setContentType("application/pdf");
+        response.setHeader("Content-Disposition", "attachment; filename=quotation_" + id + ".pdf");
+        // minimal stub: empty PDF bytes or message. For now write nothing to keep stub simple.
+        response.getOutputStream().flush();
     }
 }

@@ -14,4 +14,3 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
     List<Quotation> findByStatus(QuotationStatus status);
     // Add more as needed
 }
-

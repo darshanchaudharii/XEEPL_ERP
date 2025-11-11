@@ -12,6 +12,9 @@ public class RawMaterial {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @ManyToOne
+    @JoinColumn(name = "parent_item_id")
+    private Item parentItem;
     @Column(nullable = false, unique = true,length = 500)
     private String name;
     @Column (nullable = false)

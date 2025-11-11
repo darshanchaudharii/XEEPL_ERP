@@ -12,4 +12,3 @@ public interface QuotationLineRepository extends JpaRepository<QuotationLine, Lo
     List<QuotationLine> findByQuotationIdAndIsRawMaterialFalseOrderById(Long quotationId);
     List<QuotationLine> findByParentItemIdOrderById(Long parentId);
 }
-

@@ -1,6 +1,5 @@
 package com.xeepl.erp.entity;
 
-import com.xeepl.erp.entity.UserRole;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;

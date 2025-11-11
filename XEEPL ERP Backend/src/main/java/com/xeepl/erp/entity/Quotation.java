@@ -42,4 +42,3 @@ public class Quotation {
     )
     private List<Catalog> linkedCatalogs = new ArrayList<>();
 }
-
