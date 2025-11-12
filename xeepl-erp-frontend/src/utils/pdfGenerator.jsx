@@ -1,10 +1,14 @@
-import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, pdf, Image } from '@react-pdf/renderer';
+import { getItemDescription, getRawMaterialDescription } from './quotationFormatter';
 
 const styles = StyleSheet.create({
   page: {
     padding: 30,
     fontSize: 10,
-    fontFamily: 'Helvetica'
+    fontFamily: 'Helvetica',
+    position: 'relative',
+    backgroundColor: '#ffffff',
+    paddingBottom: 60
   },
   header: {
     marginBottom: 16,
@@ -53,7 +57,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#1f8a4c',
     color: 'white',
     padding: 8,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    position: 'relative',
+    overflow: 'hidden'
+  },
+  tableHeaderPattern: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0.2,
+    backgroundColor: '#1a6b3d'
+  },
+  tableHeaderStripe: {
+    position: 'absolute',
+    width: '200%',
+    height: 2,
+    backgroundColor: '#1a6b3d',
+    opacity: 0.3,
+    transform: 'rotate(45deg)'
+  },
+  tableHeaderText: {
+    position: 'relative',
+    zIndex: 1
   },
   tableRow: {
     flexDirection: 'row',
@@ -68,19 +95,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     paddingLeft: 20
   },
+  tableRowRemoved: {
+    backgroundColor: '#fff9e6',
+    opacity: 0.8
+  },
+  removedText: {
+    textDecoration: 'line-through',
+    color: '#999'
+  },
   col1: { width: '10%' },
   col2: { width: '45%' },
   col3: { width: '15%' },
   col4: { width: '15%' },
   col5: { width: '15%', textAlign: 'right' },
-  itemDescription: {
+  itemName: {
+    fontWeight: 'bold',
+    color: '#333'
+  },
+  rawName: {
     fontWeight: 'bold',
     color: '#333'
   },
   rawDescription: {
-    fontStyle: 'italic',
     color: '#666',
-    fontSize: 9
+    fontSize: 9,
+    marginTop: 2
+  },
+  itemDescription: {
+    color: '#666',
+    fontSize: 9,
+    marginTop: 2
   },
   grandTotalRow: {
     flexDirection: 'row',
@@ -114,23 +158,30 @@ const styles = StyleSheet.create({
   }
 });
 
-export const generateQuotationPDF = async (quotation, quotationLines, options = { showRawPrices: true }) => {
-  const { showRawPrices } = options;
+export const generateQuotationPDF = async (quotation, quotationLines, options = { showRawPrices: true, items: [], rawMaterials: [] }) => {
+  const { showRawPrices, items: allItems = [], rawMaterials = [] } = options;
 
   // Ensure ordering: items then children raws (a,b,...) by id asc
-  const items = (quotationLines || []).filter(l => !l.isRawMaterial);
+  // Include removed raws if they exist in the quotationLines array
+  const quotationItems = (quotationLines || []).filter(l => !l.isRawMaterial && !l.removed);
   const raws = (quotationLines || []).filter(l => l.isRawMaterial);
   const orderedLines = [];
-  items.forEach(item => {
+  quotationItems.forEach(item => {
     orderedLines.push(item);
     raws
-      .filter(r => r.parentItemId === item.id && !r.removed)
+      .filter(r => r.parentItemId === item.id)
       .sort((a, b) => a.id - b.id)
       .forEach(r => orderedLines.push(r));
   });
+  // Helper function to format currency with proper rupee symbol
+  const formatCurrency = (amount) => {
+    // Use "Rs." instead of ₹ symbol for better PDF compatibility
+    return `Rs. ${Number(amount).toFixed(2)}`;
+  };
+
   const MyDocument = (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" style={styles.page} wrap>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>QUOTATION</Text>
@@ -183,62 +234,96 @@ export const generateQuotationPDF = async (quotation, quotationLines, options = 
           
           {/* Table Header */}
           <View style={styles.tableHeader}>
-            <Text style={styles.col1}>Sr No</Text>
-            <Text style={styles.col2}>Description</Text>
-            <Text style={styles.col3}>Qty</Text>
-            <Text style={styles.col4}>Rate ₹</Text>
-            <Text style={styles.col5}>Total ₹</Text>
+            {/* Diagonal stripe pattern overlay */}
+            {Array.from({ length: 20 }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.tableHeaderStripe,
+                  {
+                    top: i * 8 - 100,
+                    left: -50
+                  }
+                ]}
+              />
+            ))}
+            <Text style={[styles.col1, styles.tableHeaderText]}>Sr No</Text>
+            <Text style={[styles.col2, styles.tableHeaderText]}>Description</Text>
+            <Text style={[styles.col3, styles.tableHeaderText]}>Qty</Text>
+            <Text style={[styles.col4, styles.tableHeaderText]}>Rate (Rs.)</Text>
+            <Text style={[styles.col5, styles.tableHeaderText]}>Total (Rs.)</Text>
           </View>
 
           {/* Table Rows */}
-          {orderedLines
-            .filter(line => !line.isRawMaterial)
-            .map((line, index) => (
-              <View key={line.id}>
-                {/* Main Item Row */}
-                <View style={styles.tableRow}>
-                  <Text style={styles.col1}>{index + 1}</Text>
-                  <Text style={[styles.col2, styles.itemDescription]}>
-                    {line.itemDescription}
-                  </Text>
-                  <Text style={styles.col3}>{line.quantity}</Text>
-                  <Text style={styles.col4}>{Number(line.unitPrice).toFixed(2)}</Text>
-                  <Text style={styles.col5}>{Number(line.total).toFixed(2)}</Text>
-                </View>
-
-                {/* Raw Material Rows */}
-                {orderedLines
-                  .filter(raw => 
-                    raw.isRawMaterial && 
-                    raw.parentItemId === line.id
-                  )
-                  .map((raw, rawIndex) => (
-                    <View key={raw.id} style={styles.tableRowRaw}>
-                      <Text style={styles.col1}>
-                        {String.fromCharCode(97 + rawIndex)})
+          {quotationItems.map((line, index) => {
+              // Get all raws for this item (including removed) sorted by ID
+              const itemRaws = orderedLines
+                .filter(raw => raw.isRawMaterial && raw.parentItemId === line.id)
+                .sort((a, b) => a.id - b.id);
+              
+              return (
+                <View key={line.id}>
+                  {/* Main Item Row */}
+                  <View style={styles.tableRow}>
+                    <Text style={styles.col1}>{index + 1}</Text>
+                    <View style={styles.col2}>
+                      <Text style={styles.itemName}>
+                        {line.itemDescription}
                       </Text>
-                      <Text style={[styles.col2, styles.rawDescription]}>
-                        {raw.itemDescription}
-                      </Text>
-                      <Text style={styles.col3}>{raw.quantity}</Text>
-                      <Text style={styles.col4}>{showRawPrices ? Number(raw.unitPrice).toFixed(2) : '—'}</Text>
-                      <Text style={styles.col5}>—</Text>
+                      {(() => {
+                        const itemDesc = getItemDescription(line, allItems);
+                        return itemDesc ? (
+                          <Text style={styles.itemDescription}>
+                            {itemDesc}
+                          </Text>
+                        ) : null;
+                      })()}
                     </View>
-                  ))
-                }
-              </View>
-            ))
+                    <Text style={styles.col3}>{line.quantity}</Text>
+                    <Text style={styles.col4}>{formatCurrency(line.unitPrice)}</Text>
+                    <Text style={styles.col5}>{formatCurrency(line.total)}</Text>
+                  </View>
+
+                  {/* Raw Material Rows */}
+                  {itemRaws.map((raw, rawIndex) => {
+                    const rawDesc = getRawMaterialDescription(raw, rawMaterials);
+                    return (
+                      <View key={raw.id} style={[styles.tableRowRaw, raw.removed ? styles.tableRowRemoved : null]}>
+                        <Text style={styles.col1}>
+                          {String.fromCharCode(97 + rawIndex)})
+                        </Text>
+                        <View style={styles.col2}>
+                          <Text style={[styles.rawName, raw.removed ? styles.removedText : null]}>
+                            {raw.removed ? `${raw.itemDescription} (Removed)` : raw.itemDescription}
+                          </Text>
+                          {rawDesc ? (
+                            <Text style={[styles.rawDescription, raw.removed ? styles.removedText : null]}>
+                              {rawDesc}
+                            </Text>
+                          ) : null}
+                        </View>
+                        <Text style={[styles.col3, raw.removed ? styles.removedText : null]}>{raw.quantity}</Text>
+                        <Text style={[styles.col4, raw.removed ? styles.removedText : null]}>
+                          {showRawPrices ? formatCurrency(raw.unitPrice) : '—'}
+                        </Text>
+                        <Text style={styles.col5}>—</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            })
           }
 
           {/* Grand Total */}
           <View style={styles.grandTotalRow}>
             <Text style={styles.grandTotalLabel}>Grand Total:</Text>
             <Text style={styles.grandTotalValue}>
-              ₹{quotationLines
-                .filter(line => !line.isRawMaterial)
-                .reduce((sum, line) => sum + Number(line.total), 0)
-                .toFixed(2)
-              }
+              {formatCurrency(
+                quotationLines
+                  .filter(line => !line.isRawMaterial)
+                  .reduce((sum, line) => sum + Number(line.total), 0)
+              )}
             </Text>
           </View>
         </View>
@@ -256,7 +341,7 @@ export const generateQuotationPDF = async (quotation, quotationLines, options = 
   return blob;
 };
 
-export const downloadQuotationPDF = async (quotation, quotationLines, options = { showRawPrices: true }) => {
+export const downloadQuotationPDF = async (quotation, quotationLines, options = { showRawPrices: true, items: [], rawMaterials: [] }) => {
   try {
     const blob = await generateQuotationPDF(quotation, quotationLines, options);
     const url = URL.createObjectURL(blob);

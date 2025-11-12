@@ -4,6 +4,8 @@ import com.xeepl.erp.dto.*;
 import com.xeepl.erp.entity.*;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
@@ -41,11 +43,21 @@ public class QuotationMapper {
                     c.setLogoUrl(cat.getFilePath());
                     return c;
                 }).collect(Collectors.toList()));
-        dto.setItems(quotation.getItems().stream()
-                .filter(line -> includeRemoved || !Boolean.TRUE.equals(line.getRemoved()))
-                .map(line -> {
-                    return toLineDto(line);
-                }).collect(Collectors.toList()));
+        // Get all items from quotation
+        List<QuotationLine> allItems = quotation.getItems() != null ? quotation.getItems() : new ArrayList<>();
+        
+        // Filter items based on includeRemoved flag
+        // If includeRemoved is true, include ALL items (both removed and not removed)
+        // If includeRemoved is false, only include items where removed is NOT true
+        List<QuotationLineDTO> filteredItems = allItems.stream()
+                .filter(line -> {
+                    boolean isRemoved = Boolean.TRUE.equals(line.getRemoved());
+                    return includeRemoved || !isRemoved;
+                })
+                .map(line -> toLineDto(line))
+                .collect(Collectors.toList());
+        
+        dto.setItems(filteredItems);
         return dto;
     }
 

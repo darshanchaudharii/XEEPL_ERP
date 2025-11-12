@@ -4,6 +4,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import Modal from '../common/Modal';
 import '../../styles/sectionmaster.css';
+import '../../styles/modern-table.css';
 
 const SectionMaster = () => {
   const [sections, setSections] = useState([]);
@@ -159,19 +160,27 @@ const SectionMaster = () => {
               <i className="fas fa-list"></i>
               Sections List
             </h3>
-            <input
-              className="search-input"
-              placeholder="Search in table..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
           </div>
 
-          <div className="table-wrapper">
-            {loading ? (
-              <LoadingSpinner />
-            ) : (
-              <table className="data-table">
+          <div className="table-section">
+            {/* Search Bar - Flush above table */}
+            <div className="table-controls-bar">
+              <div className="search-input-wrapper">
+                <input
+                  className="table-search-input"
+                  placeholder="Search in table..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="table-wrapper">
+              {loading ? (
+                <LoadingSpinner />
+              ) : (
+                <table className="data-table modern-table">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -191,29 +200,34 @@ const SectionMaster = () => {
                         <td>{section.id}</td>
                         <td>{section.sectionName}</td>
                         <td>
-                          <button 
-                            className="btn btn-edit" 
-                            onClick={() => handleEdit(section)}
-                          >
-                            <i className="fas fa-edit"></i>
-                            Edit
-                          </button>
+                          <div className="row-actions">
+                            <button 
+                              className="btn btn-xs btn-edit" 
+                              onClick={() => handleEdit(section)}
+                              title="Edit"
+                            >
+                              <i className="fas fa-edit"></i>
+                            </button>
+                          </div>
                         </td>
                         <td>
-                          <button 
-                            className="btn btn-delete" 
-                            onClick={() => openDeleteModal(section.id)}
-                          >
-                            <i className="fas fa-trash"></i>
-                            Delete
-                          </button>
+                          <div className="row-actions">
+                            <button 
+                              className="btn btn-xs btn-delete" 
+                              onClick={() => openDeleteModal(section.id)}
+                              title="Delete"
+                            >
+                              <i className="fas fa-trash"></i>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
-            )}
+              )}
+            </div>
           </div>
         </section>
       </div>

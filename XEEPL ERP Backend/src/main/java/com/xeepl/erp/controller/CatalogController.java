@@ -85,7 +85,6 @@ public class CatalogController {
         String absoluteFilePath = "D:/XEEPL ERP/XEEPL ERP Backend/uploads/" + catalog.getFilePath().replace("\\", "/");
         Path filePath = Paths.get(absoluteFilePath).normalize();
 
-        System.out.println("Resolved file path: " + filePath.toAbsolutePath()); // Debug print
 
         Resource resource = new UrlResource(filePath.toUri());
 

@@ -1,0 +1,718 @@
+/**
+ * Modern Table Styling System
+ * Unified, professional table design with animations and modern UX
+ * 
+ * Color Theme:
+ * - Primary: #1f8a4c (Green)
+ * - Secondary: #2ecc71 (Light Green)
+ * - Accent: #3498db (Blue)
+ * - Danger: #e74c3c (Red)
+ * - Warning: #f39c12 (Orange)
+ * - Background: #ffffff (White)
+ * - Surface: #f8f9fa (Light Gray)
+ * - Border: #e0e0e0 (Gray)
+ */
+
+/* ============================================
+   TABLE CONTAINER & SEARCH BAR
+   ============================================ */
+
+/* Unified container for search/filter bar and table */
+.table-section {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: visible;
+  margin-bottom: 24px;
+  animation: fadeInUp 0.4s ease-out;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Search/Filter Bar - Flush above table */
+.table-controls-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border-bottom: 2px solid #e0e0e0;
+  flex-wrap: wrap;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+}
+
+.table-controls-bar:hover {
+  background: linear-gradient(135deg, #f0f2f5 0%, #f8f9fa 100%);
+}
+
+/* Search Input - Modern styling */
+.table-search-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 16px 10px 40px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #ffffff;
+  position: relative;
+  font-family: 'Saira', sans-serif;
+}
+
+.table-search-input:focus {
+  outline: none;
+  border-color: #1f8a4c;
+  box-shadow: 0 0 0 3px rgba(31, 138, 76, 0.1);
+  transform: translateY(-1px);
+}
+
+.table-search-input::placeholder {
+  color: #999;
+}
+
+/* Search icon wrapper */
+.search-input-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+}
+
+.search-input-wrapper::before {
+  content: '\f002';
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Filter Controls Row */
+.filter-controls-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 20px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+  position: relative;
+  z-index: 1;
+}
+
+.filter-controls-row .date-picker-wrapper {
+  min-width: 180px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+/* Modern Select/Dropdown */
+.modern-select,
+.modern-date-input {
+  padding: 10px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 150px;
+  font-family: 'Saira', sans-serif;
+  width: 100%;
+}
+
+/* Date input wrapper for react-datepicker */
+.date-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+
+.date-input-label {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+  font-family: 'Saira', sans-serif;
+}
+
+/* React DatePicker styling */
+.date-picker-wrapper {
+  width: 100%;
+}
+
+.modern-date-input {
+  width: 100%;
+  color: #333;
+  font-family: 'Saira', sans-serif;
+}
+
+.modern-select:focus,
+.modern-date-input:focus {
+  outline: none;
+  border-color: #1f8a4c;
+  box-shadow: 0 0 0 3px rgba(31, 138, 76, 0.1);
+}
+
+.modern-select:hover,
+.modern-date-input:hover {
+  border-color: #1f8a4c;
+}
+
+/* Modern Toggle Switch */
+.modern-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.modern-toggle:hover {
+  background-color: rgba(31, 138, 76, 0.05);
+}
+
+.modern-toggle input[type="checkbox"] {
+  width: 50px;
+  height: 28px;
+  cursor: pointer;
+  appearance: none;
+  background-color: #ccc;
+  border-radius: 14px;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  outline: none;
+}
+
+.modern-toggle input[type="checkbox"]::before {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: white;
+  top: 3px;
+  left: 3px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.modern-toggle input[type="checkbox"]:checked {
+  background-color: #1f8a4c;
+  border-color: #1f8a4c;
+}
+
+.modern-toggle input[type="checkbox"]:checked::before {
+  left: 25px;
+  background-color: white;
+}
+
+.modern-toggle input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(31, 138, 76, 0.2);
+}
+
+.modern-toggle span {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+  font-family: 'Saira', sans-serif;
+}
+
+/* ============================================
+   MODERN TABLE STYLING
+   ============================================ */
+
+.table-wrapper {
+  overflow-x: auto;
+  overflow-y: visible;
+  position: relative;
+}
+
+.modern-table,
+.quotation-table,
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #ffffff;
+  font-size: 14px;
+  line-height: 1.6;
+  font-family: 'Saira', sans-serif;
+}
+
+/* Table Header */
+.modern-table thead,
+.quotation-table thead,
+.data-table thead {
+  background: linear-gradient(135deg, #1f8a4c 0%, #2ecc71 100%);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.modern-table th,
+.quotation-table th,
+.data-table th {
+  padding: 16px 20px;
+  text-align: left;
+  font-weight: 600;
+  color: #ffffff;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  white-space: nowrap;
+  font-family: 'Saira', sans-serif;
+}
+
+.modern-table th:first-child,
+.quotation-table th:first-child,
+.data-table th:first-child {
+  border-top-left-radius: 0;
+}
+
+.modern-table th:last-child,
+.quotation-table th:last-child,
+.data-table th:last-child {
+  border-top-right-radius: 0;
+}
+
+/* Table Body */
+.modern-table tbody,
+.quotation-table tbody,
+.data-table tbody {
+  background: #ffffff;
+}
+
+.modern-table tbody tr,
+.quotation-table tbody tr,
+.data-table tbody tr {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-bottom: 1px solid #f0f0f0;
+  animation: fadeInRow 0.4s ease-out;
+  animation-fill-mode: both;
+}
+
+@keyframes fadeInRow {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Stagger animation for rows */
+.modern-table tbody tr:nth-child(1) { animation-delay: 0.05s; }
+.modern-table tbody tr:nth-child(2) { animation-delay: 0.1s; }
+.modern-table tbody tr:nth-child(3) { animation-delay: 0.15s; }
+.modern-table tbody tr:nth-child(4) { animation-delay: 0.2s; }
+.modern-table tbody tr:nth-child(5) { animation-delay: 0.25s; }
+
+.quotation-table tbody tr:nth-child(1) { animation-delay: 0.05s; }
+.quotation-table tbody tr:nth-child(2) { animation-delay: 0.1s; }
+.quotation-table tbody tr:nth-child(3) { animation-delay: 0.15s; }
+.quotation-table tbody tr:nth-child(4) { animation-delay: 0.2s; }
+.quotation-table tbody tr:nth-child(5) { animation-delay: 0.25s; }
+
+/* Row Hover Effect */
+.modern-table tbody tr:hover,
+.quotation-table tbody tr:hover,
+.data-table tbody tr:hover {
+  background: linear-gradient(90deg, #f0f7f4 0%, #ffffff 100%);
+  transform: translateX(4px);
+  box-shadow: -4px 0 0 0 #1f8a4c;
+  border-left: 2px solid #1f8a4c;
+}
+
+.modern-table tbody tr:hover td,
+.quotation-table tbody tr:hover td,
+.data-table tbody tr:hover td {
+  color: #1f8a4c;
+}
+
+/* Table Cells */
+.modern-table td,
+.quotation-table td,
+.data-table td {
+  padding: 16px 20px;
+  color: #333;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+  font-family: 'Saira', sans-serif;
+}
+
+.modern-table tbody tr:last-child td,
+.quotation-table tbody tr:last-child td,
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Removed Row Styling */
+.row-removed {
+  background-color: #fff9e6 !important;
+  opacity: 0.7;
+}
+
+.row-removed:hover {
+  background: linear-gradient(90deg, #fff3cd 0%, #fff9e6 100%) !important;
+  opacity: 0.9;
+}
+
+.row-removed td {
+  color: #856404 !important;
+  text-decoration: line-through;
+}
+
+/* Grand Total Row */
+.grand-total-row {
+  background: linear-gradient(135deg, #e8f5e9 0%, #d5f4e6 100%) !important;
+  border-top: 3px solid #1f8a4c !important;
+  font-weight: 600;
+}
+
+.grand-total-row td {
+  padding: 18px 20px;
+  font-size: 16px;
+  color: #1f8a4c;
+}
+
+.grand-total-row:hover {
+  background: linear-gradient(135deg, #d5f4e6 0%, #c8e6c9 100%) !important;
+  transform: none;
+  box-shadow: none;
+}
+
+/* No Data Row */
+.no-data {
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  padding: 60px 20px;
+  background: #f8f9fa;
+}
+
+/* ============================================
+   ACTION BUTTONS
+   ============================================ */
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.btn-xs {
+  padding: 8px 12px;
+  font-size: 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 500;
+  min-width: 36px;
+  height: 36px;
+  font-family: 'Saira', sans-serif;
+}
+
+.btn-xs:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-xs:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-xs:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(31, 138, 76, 0.3);
+}
+
+/* Button Colors */
+.btn-edit {
+  background-color: #5dade2;
+  color: #fff;
+}
+
+.btn-edit:hover {
+  background-color: #3498db;
+}
+
+.btn-save {
+  background-color: #27ae60;
+  color: #fff;
+}
+
+.btn-save:hover {
+  background-color: #229954;
+}
+
+.btn-cancel {
+  background-color: #bdc3c7;
+  color: #2c3e50;
+}
+
+.btn-cancel:hover {
+  background-color: #95a5a6;
+}
+
+.btn-delete {
+  background-color: #e74c3c;
+  color: #fff;
+}
+
+.btn-delete:hover {
+  background-color: #c0392b;
+}
+
+.btn-undo {
+  background-color: #f39c12;
+  color: #fff;
+}
+
+.btn-undo:hover {
+  background-color: #e67e22;
+}
+
+.btn-minus {
+  background-color: #e67e22;
+  color: #fff;
+}
+
+.btn-minus:hover {
+  background-color: #d35400;
+}
+
+.btn-view {
+  background-color: #3498db;
+  color: #fff;
+}
+
+.btn-view:hover {
+  background-color: #2980b9;
+}
+
+/* Status Badge Styling */
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: 'Saira', sans-serif;
+}
+
+/* Avatar/Image Styling in Tables */
+.table-avatar,
+.data-table td img {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.table-avatar:hover,
+.data-table td img:hover {
+  border-color: #1f8a4c;
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(31, 138, 76, 0.3);
+}
+
+.avatar-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1f8a4c 0%, #2ecc71 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  border: 2px solid #e0e0e0;
+}
+
+.table-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.table-image:hover {
+  border-color: #1f8a4c;
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(31, 138, 76, 0.3);
+}
+
+.badge-status-draft {
+  background-color: #ffe5e5;
+  color: #e74c3c;
+}
+
+.badge-status-sent {
+  background-color: #e3f2fd;
+  color: #2980b9;
+}
+
+.badge-status-approved,
+.badge-status-finalized {
+  background-color: #d5f4e6;
+  color: #27ae60;
+}
+
+.badge-status-rejected {
+  background-color: #ffe5e5;
+  color: #e74c3c;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 768px) {
+  .table-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-input-wrapper,
+  .table-search-input {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .filter-controls-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modern-select,
+  .modern-date-input {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modern-table,
+  .quotation-table,
+  .data-table {
+    min-width: 600px;
+  }
+
+  .modern-table th,
+  .quotation-table th,
+  .data-table th,
+  .modern-table td,
+  .quotation-table td,
+  .data-table td {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+
+  .row-actions {
+    flex-wrap: wrap;
+  }
+
+  .btn-xs {
+    min-width: 32px;
+    height: 32px;
+    padding: 6px 10px;
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+/* Focus visible for keyboard navigation */
+.modern-table tbody tr:focus-within,
+.quotation-table tbody tr:focus-within,
+.data-table tbody tr:focus-within {
+  outline: 2px solid #1f8a4c;
+  outline-offset: -2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .modern-table th,
+  .quotation-table th,
+  .data-table th {
+    border-bottom: 3px solid #ffffff;
+  }
+
+  .modern-table tbody tr:hover,
+  .quotation-table tbody tr:hover,
+  .data-table tbody tr:hover {
+    border-left: 4px solid #1f8a4c;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  .table-controls-bar,
+  .filter-controls-row,
+  .row-actions {
+    display: none;
+  }
+
+  .modern-table,
+  .quotation-table,
+  .data-table {
+    box-shadow: none;
+  }
+}
+

@@ -4,6 +4,9 @@ import { API_BASE_URL } from '../utils/constants';
 export const fetchAPI = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
   
+  // Get JWT token from localStorage
+  const token = localStorage.getItem('auth_token');
+  
   try {
     console.log('API Request:', {
       url,
@@ -11,11 +14,18 @@ export const fetchAPI = async (endpoint, options = {}) => {
       hasBody: !!options.body
     });
 
+    const headers = {
+      ...options.headers
+    };
+
+    // Add Authorization header if token exists
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(url, {
       ...options,
-      headers: {
-        ...options.headers
-      }
+      headers
     });
 
     // Handle no content responses
@@ -153,11 +163,55 @@ export const del = (endpoint) => {
 export const downloadFile = async (endpoint, filename) => {
   const url = `${API_BASE_URL}${endpoint}`;
   
+  // Get JWT token from localStorage
+  const token = localStorage.getItem('auth_token');
+  
   try {
-    const response = await fetch(url);
+    const headers = {};
+    
+    // Add Authorization header if token exists
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: headers
+    });
     
     if (!response.ok) {
-      throw new Error('Download failed');
+      // Try to get error message from response
+      let errorMessage = `Download failed with status: ${response.status}`;
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } else {
+          const text = await response.text();
+          if (text) {
+            errorMessage += ` - ${text.substring(0, 200)}`;
+          }
+        }
+      } catch (e) {
+        // If error parsing fails, use default message
+      }
+      throw new Error(errorMessage);
+    }
+
+    // Check if response is actually a file (not JSON error)
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      // If we get JSON, it's probably an error
+      try {
+        const errorData = await response.json();
+        throw new Error(errorData.message || errorData.error || 'Download failed: Server returned JSON instead of file');
+      } catch (e) {
+        if (e.message.includes('Download failed')) {
+          throw e;
+        }
+        // If JSON parsing fails, continue with blob processing
+      }
     }
 
     const blob = await response.blob();

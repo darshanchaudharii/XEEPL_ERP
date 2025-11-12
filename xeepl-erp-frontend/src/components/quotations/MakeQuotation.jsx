@@ -9,7 +9,8 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import Modal from '../common/Modal';
 import '../../styles/makequotation.css';
-import { downloadQuotationPDF } from '../../utils/pdfGenerator'; 
+import { downloadQuotationPDF } from '../../utils/pdfGenerator';
+import { getItemDescription, getRawMaterialDescription } from '../../utils/quotationFormatter'; 
 
 const MakeQuotation = () => {
   const navigate = useNavigate();
@@ -45,22 +46,82 @@ const MakeQuotation = () => {
   const [editQty, setEditQty] = useState('');
   const [editRate, setEditRate] = useState('');
 
-  const handleRemoveLine = (lineId) => {
-    const lineToRemove = quotationLines.find(line => line.id === lineId);
-    if (lineToRemove) {
-      setRemovedLines(prev => [...prev, { ...lineToRemove, removedAt: Date.now(), removed: true }]);
-      setQuotationLines(prev => prev.filter(line => line.id !== lineId));
+  // Helper function to check if an ID is a temporary ID (created with Date.now())
+  // Database IDs are typically small integers, while Date.now() generates very large numbers
+  const isTemporaryId = (id) => {
+    // If ID is greater than 1e12 (1 trillion), it's likely a timestamp-based temporary ID
+    // Database IDs are auto-incrementing and unlikely to exceed this threshold
+    return id > 1e12;
+  };
+
+  const handleRemoveLine = async (lineId) => {
+    if (!quotationId) {
+      setError('Please select a quotation first');
+      return;
+    }
+
+    // Check if this is a temporary ID (unsaved line)
+    if (isTemporaryId(lineId)) {
+      // Handle locally for unsaved lines
+      const lineToRemove = quotationLines.find(line => line.id === lineId);
+      if (lineToRemove) {
+        setRemovedLines(prev => [...prev, { ...lineToRemove, removed: true }]);
+        setQuotationLines(prev => prev.filter(line => line.id !== lineId));
+      }
+      return;
+    }
+
+    // For saved lines, call the backend API
+    try {
+      setLoading(true);
+      setError('');
+      // Call backend API to soft delete the line
+      await quotationService.removeLine(lineId);
+      // Refresh quotation data to get updated state
+      await handleSelectQuotation(quotationId);
+    } catch (err) {
+      setError('Failed to remove line: ' + err.message);
+      console.error('Remove line error:', err);
+    } finally {
+      setLoading(false);
     }
   };
-  const handleUndoRemove = (lineId) => {
-    const lineToRestore = removedLines.find(line => line.id === lineId);
-    if (lineToRestore) {
-      const restoredLine = { ...lineToRestore };
-      delete restoredLine.removed;
-      setQuotationLines(prev => [...prev, restoredLine]);
-      setRemovedLines(prev => prev.filter(line => line.id !== lineId));
+
+  const handleUndoRemove = async (lineId) => {
+    if (!quotationId) {
+      setError('Please select a quotation first');
+      return;
+    }
+
+    // Check if this is a temporary ID (unsaved line)
+    if (isTemporaryId(lineId)) {
+      // Handle locally for unsaved lines
+      const lineToRestore = removedLines.find(line => line.id === lineId);
+      if (lineToRestore) {
+        const restoredLine = { ...lineToRestore };
+        delete restoredLine.removed;
+        setQuotationLines(prev => [...prev, restoredLine]);
+        setRemovedLines(prev => prev.filter(line => line.id !== lineId));
+      }
+      return;
+    }
+
+    // For saved lines, call the backend API
+    try {
+      setLoading(true);
+      setError('');
+      // Call backend API to restore the line
+      await quotationService.undoRemoveLine(lineId);
+      // Refresh quotation data to get updated state
+      await handleSelectQuotation(quotationId);
+    } catch (err) {
+      setError('Failed to restore line: ' + err.message);
+      console.error('Undo remove error:', err);
+    } finally {
+      setLoading(false);
     }
   };
+
   // decrement one quantity
   const handleDecrementQuantity = (lineId) => {
     setQuotationLines(prev => {
@@ -78,17 +139,20 @@ const MakeQuotation = () => {
       return updated;
     });
   };
+
   // inline edit
   const startEdit = (line) => {
     setEditingLineId(line.id);
     setEditQty(String(line.quantity));
     setEditRate(String(line.unitPrice));
   };
+
   const cancelEdit = () => {
     setEditingLineId(null);
     setEditQty('');
     setEditRate('');
   };
+
   const saveEdit = (lineId) => {
     const qty = Math.max(1, Number(editQty) || 1);
     const rate = Number(editRate) || 0;
@@ -162,6 +226,7 @@ const MakeQuotation = () => {
     setQuotationId(qId);
     if (!qId) {
       setQuotationLines([]);
+      setRemovedLines([]);
       setCustomerId('');
       setSelectedCatalogs([]);
       return;
@@ -169,7 +234,8 @@ const MakeQuotation = () => {
 
     setLoading(true);
     try {
-      const quotation = await quotationService.getQuotationById(qId);
+      // Always fetch with includeRemoved=true to get all lines (we'll filter on frontend based on toggle)
+      const quotation = await quotationService.getQuotationByIdWithRemoved(qId, true);
       // Enrich quotation lines with itemId by matching with items list
       const allLines = (quotation.items || []);
       const enrichedLines = allLines.filter(l => !l.removed).map(line => {
@@ -197,6 +263,7 @@ const MakeQuotation = () => {
         }
         return line;
       });
+
       const removed = allLines.filter(l => l.removed).map(l => ({ ...l, removed: true }));
       setQuotationLines(enrichedLines);
       setRemovedLines(removed);
@@ -215,17 +282,16 @@ const MakeQuotation = () => {
       setError('Please select a quotation first');
       return;
     }
-
     if (!window.confirm('Are you sure you want to delete this quotation?')) {
       return;
     }
-
     setLoading(true);
     try {
       await quotationService.deleteQuotation(quotationId);
       await fetchInitialData();
       setQuotationId('');
       setQuotationLines([]);
+      setRemovedLines([]);
       setCustomerId('');
       setSelectedCatalogs([]);
     } catch (err) {
@@ -339,7 +405,6 @@ const MakeQuotation = () => {
     // Attach to the most recently added ITEM row (parent)
     const lastItem = [...quotationLines].reverse().find(l => !l.isRawMaterial);
     const parentItemId = lastItem ? lastItem.id : null;
-
     const description = `${raw.name} (Raw Material)`;
     
     // Check if raw material already exists with same parent
@@ -405,7 +470,140 @@ const MakeQuotation = () => {
 
     setLoading(true);
     try {
-      const quotation = await quotationService.getQuotationById(quotationId);
+      // Fetch the latest quotation state with all lines (including removed) to ensure we have the most up-to-date data
+      const quotation = await quotationService.getQuotationByIdWithRemoved(quotationId, true);
+      
+      // Get all lines from the database (both active and removed)
+      const allDbLines = quotation.items || [];
+      
+      // Create a map of database lines by ID for quick lookup
+      const dbLinesMap = new Map(allDbLines.map(line => [line.id, { ...line }]));
+      
+      // Process removed lines FIRST to ensure they're marked as removed
+      // This prevents active lines from overwriting the removed state
+      removedLines.forEach(removedLine => {
+        if (!isTemporaryId(removedLine.id)) {
+          // Only process lines with real database IDs
+          if (dbLinesMap.has(removedLine.id)) {
+            // Existing line - mark as removed
+            const dbLine = dbLinesMap.get(removedLine.id);
+            dbLine.removed = true;
+            // Update other fields from local state if needed
+            dbLine.itemDescription = removedLine.itemDescription;
+            dbLine.quantity = removedLine.quantity;
+            dbLine.unitPrice = removedLine.unitPrice;
+          } else {
+            // Removed line exists in removedLines but not in DB - add it as removed
+            dbLinesMap.set(removedLine.id, {
+              id: removedLine.id,
+              itemDescription: removedLine.itemDescription,
+              quantity: removedLine.quantity,
+              unitPrice: removedLine.unitPrice,
+              isRawMaterial: removedLine.isRawMaterial || false,
+              parentItemId: removedLine.parentItemId,
+              rawId: removedLine.rawId,
+              removed: true
+            });
+          }
+        }
+      });
+      
+      // Process all local active lines (including new ones with temporary IDs)
+      // IMPORTANT: Only process lines that are NOT in removedLines to avoid overwriting removed state
+      const removedLineIds = new Set(removedLines.map(rl => rl.id).filter(id => !isTemporaryId(id)));
+      
+      quotationLines.forEach(localLine => {
+        // Skip if this line is in removedLines (already processed above)
+        if (!isTemporaryId(localLine.id) && removedLineIds.has(localLine.id)) {
+          return; // Skip - already marked as removed
+        }
+        
+        if (isTemporaryId(localLine.id)) {
+          // New line with temporary ID - add it as a new line (without ID)
+          dbLinesMap.set(localLine.id, {
+            id: null, // Will be generated by database
+            itemDescription: localLine.itemDescription,
+            quantity: localLine.quantity,
+            unitPrice: localLine.unitPrice,
+            isRawMaterial: localLine.isRawMaterial || false,
+            parentItemId: localLine.parentItemId,
+            rawId: localLine.rawId,
+            removed: false
+          });
+        } else if (dbLinesMap.has(localLine.id)) {
+          // Existing line - update with local changes, but preserve removed state if it was set
+          const dbLine = dbLinesMap.get(localLine.id);
+          // Only update removed to false if it's not already marked as removed
+          if (!dbLine.removed) {
+            dbLine.itemDescription = localLine.itemDescription;
+            dbLine.quantity = localLine.quantity;
+            dbLine.unitPrice = localLine.unitPrice;
+            dbLine.removed = false; // Active lines are not removed
+          }
+        } else {
+          // Line exists locally but not in DB - add it
+          dbLinesMap.set(localLine.id, {
+            id: localLine.id,
+            itemDescription: localLine.itemDescription,
+            quantity: localLine.quantity,
+            unitPrice: localLine.unitPrice,
+            isRawMaterial: localLine.isRawMaterial || false,
+            parentItemId: localLine.parentItemId,
+            rawId: localLine.rawId,
+            removed: false
+          });
+        }
+      });
+      
+      // Convert to update format
+      // For new lines, we need to handle parentItemId mapping if it references a temporary ID
+      // Strategy: Save items first (no parent), then raw materials (with parent reference by order)
+      const allLinesArray = Array.from(dbLinesMap.values());
+      
+      // Separate items and raw materials
+      const items = allLinesArray.filter(line => !line.isRawMaterial);
+      const rawMaterials = allLinesArray.filter(line => line.isRawMaterial);
+      
+      // Create a mapping from temporary parent IDs to array index for items
+      const tempIdToIndexMap = new Map();
+      items.forEach((item, index) => {
+        if (isTemporaryId(item.id)) {
+          tempIdToIndexMap.set(item.id, index);
+        }
+      });
+      
+      // Convert items first (no parent references)
+      // IMPORTANT: Explicitly set removed flag - don't rely on default
+      const itemsToSave = items.map((line, index) => ({
+        id: line.id, // null for new lines
+        itemDescription: line.itemDescription,
+        quantity: line.quantity,
+        unitPrice: line.unitPrice,
+        isRawMaterial: false,
+        parentItemId: null,
+        rawId: line.rawId,
+        removed: Boolean(line.removed) // Explicitly convert to boolean
+      }));
+      
+      // Convert raw materials with parentItemId mapping
+      // IMPORTANT: Explicitly set removed flag - don't rely on default
+      const rawMaterialsToSave = rawMaterials.map(line => {
+        let parentItemId = line.parentItemId;
+        
+        return {
+          id: line.id,
+          itemDescription: line.itemDescription,
+          quantity: line.quantity,
+          unitPrice: line.unitPrice,
+          isRawMaterial: true,
+          parentItemId: parentItemId, // Backend will handle mapping
+          rawId: line.rawId,
+          removed: Boolean(line.removed) // Explicitly convert to boolean
+        };
+      });
+      
+      // Combine: items first, then raw materials
+      const allLines = [...itemsToSave, ...rawMaterialsToSave];
       
       const updateData = {
         name: quotation.name,
@@ -414,11 +612,7 @@ const MakeQuotation = () => {
         status: 'FINALIZED',
         customerId: customerId ? Number(customerId) : null,
         catalogIds: selectedCatalogs,
-        items: quotationLines.map(line => ({
-          itemDescription: line.itemDescription,
-          quantity: line.quantity,
-          unitPrice: line.unitPrice
-        }))
+        items: allLines
       };
 
       await quotationService.updateQuotation(quotationId, updateData);
@@ -430,26 +624,26 @@ const MakeQuotation = () => {
     }
   };
 
-const handleDownloadPDF = async () => {
-  if (!quotationId) {
-    setError('Please select a quotation');
-    return;
-  }
+  const handleDownloadPDF = async () => {
+    if (!quotationId) {
+      setError('Please select a quotation');
+      return;
+    }
 
-  try {
-    setLoading(true);
-    const quotation = await quotationService.getQuotationByIdWithRemoved(quotationId, showRemovedRaws);
-    const allLines = [
-      ...quotationLines,
-      ...(showRemovedRaws ? removedLines : [])
-    ];
-    await downloadQuotationPDF(quotation, allLines, { showRawPrices });
-  } catch (err) {
-    setError('Failed to generate PDF: ' + err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      setLoading(true);
+      const quotation = await quotationService.getQuotationByIdWithRemoved(quotationId, showRemovedRaws);
+      const allLines = [
+        ...quotationLines,
+        ...(showRemovedRaws ? removedLines : [])
+      ];
+      await downloadQuotationPDF(quotation, allLines, { showRawPrices, items, rawMaterials });
+    } catch (err) {
+      setError('Failed to generate PDF: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRefresh = () => {
     fetchInitialData();
@@ -592,7 +786,7 @@ const handleDownloadPDF = async () => {
                     checked={showRemovedRaws}
                     onChange={(e) => setShowRemovedRaws(e.target.checked)}
                   />
-                  Show removed raws
+                  <span>Show removed raws</span>
                 </label>
               </div>
 
@@ -645,7 +839,6 @@ const handleDownloadPDF = async () => {
                       ))}
                     </select>
                   </div>
-
                   <div className="form-row">
                     <div className="form-group">
                       <label>Qty</label>
@@ -697,7 +890,6 @@ const handleDownloadPDF = async () => {
                       ))}
                     </select>
                   </div>
-
                   <div className="form-row">
                     <div className="form-group">
                       <label>Qty</label>
@@ -738,30 +930,44 @@ const handleDownloadPDF = async () => {
               <i className="fas fa-list"></i>
               Quotation Lines
             </h2>
-            <div className="header-actions">
-              <label className="toggle-label">
-                <input
-                  type="checkbox"
-                  checked={showRawPrices}
-                  onChange={(e) => setShowRawPrices(e.target.checked)}
-                />
-                Show raw prices
-              </label>
-              <input
-                type="text"
-                placeholder="Search in table..."
-                className="search-input"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
           </div>
 
           {loading ? (
             <LoadingSpinner message="Loading quotation..." />
           ) : (
-            <div className="quotation-table-container">
-              <table className="quotation-table">
+            <div className="table-section">
+              {/* Search and Filter Bar - Flush above table */}
+              <div className="table-controls-bar">
+                <div className="search-input-wrapper">
+                  <input
+                    type="text"
+                    placeholder="Search in table..."
+                    className="table-search-input"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <label className="modern-toggle">
+                  <input
+                    type="checkbox"
+                    checked={showRawPrices}
+                    onChange={(e) => setShowRawPrices(e.target.checked)}
+                  />
+                  <span>Show raw prices</span>
+                </label>
+                <label className="modern-toggle">
+                  <input
+                    type="checkbox"
+                    checked={showRemovedRaws}
+                    onChange={(e) => setShowRemovedRaws(e.target.checked)}
+                  />
+                  <span>Show removed raws</span>
+                </label>
+              </div>
+
+              {/* Table */}
+              <div className="table-wrapper">
+                <table className="quotation-table modern-table">
                 <thead>
                   <tr>
                     <th>Sr No</th>
@@ -792,12 +998,17 @@ const handleDownloadPDF = async () => {
                           <React.Fragment key={line.id}>
                             <tr>
                               <td>{index + 1}</td>
-                              <td>
+                                    <td>
                                 <div>
                                   <strong>{line.itemDescription}</strong>
-                                  <div style={{ fontSize: '12px', color: '#555', marginTop: 4 }}>
-                                    {line.itemLongDescription || (items.find(i => i.id === line.itemId || i.itemName === line.itemDescription)?.itemDescription) || ''}
-                                  </div>
+                                  {(() => {
+                                    const itemDesc = getItemDescription(line, items);
+                                    return itemDesc ? (
+                                      <div style={{ fontSize: '12px', color: '#666', marginTop: 4, fontStyle: 'normal' }}>
+                                        {itemDesc}
+                                      </div>
+                                    ) : null;
+                                  })()}
                                 </div>
                               </td>
                               <td>
@@ -854,7 +1065,18 @@ const handleDownloadPDF = async () => {
                                   <tr key={`${raw._removed?'removed-':''}${raw.id}`} className={raw._removed ? 'row-removed' : ''}>
                                     <td></td>
                                     <td style={{ paddingLeft: 24 }}>
-                                      {String.fromCharCode(97 + rawIndex)}) {raw._removed ? <><s>{raw.itemDescription}</s> <em>(Removed)</em></> : raw.itemDescription}
+                                      <div>
+                                        <strong>{String.fromCharCode(97 + rawIndex)}) {raw._removed ? <><s>{raw.itemDescription}</s></> : raw.itemDescription}</strong>
+                                        {raw._removed && <em> (Removed)</em>}
+                                        {(() => {
+                                          const rawDesc = getRawMaterialDescription(raw, rawMaterials);
+                                          return rawDesc ? (
+                                            <div style={{ fontSize: '12px', color: '#666', marginTop: 4, fontStyle: 'normal' }}>
+                                              {rawDesc}
+                                            </div>
+                                          ) : null;
+                                        })()}
+                                      </div>
                                     </td>
                                     <td>
                                       {editingLineId === raw.id && !raw._removed ? (
@@ -923,6 +1145,7 @@ const handleDownloadPDF = async () => {
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
           )}
 

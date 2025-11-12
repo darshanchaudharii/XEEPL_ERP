@@ -10,6 +10,7 @@ import com.xeepl.erp.mapper.UserMapper;
 import com.xeepl.erp.repository.UserRepository;
 import com.xeepl.erp.util.FileUploadUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,6 +27,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final FileUploadUtil fileUploadUtil;
+    private final PasswordEncoder passwordEncoder;
 
     private static final long MAX_PROFILE_PHOTO_SIZE = 512 * 1024; // 512 KB
 
@@ -47,8 +49,9 @@ public class UserService {
         User user = new User();
         user.setFullName(dto.getFullName());
         user.setUsername(dto.getUsername());
-        user.setPassword(dto.getPassword()); // TODO: encrypt password in production
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setMobile(dto.getMobile());
+        user.setEmail(dto.getEmail());
         user.setRole(dto.getRole());
 
         if (profilePhoto != null && !profilePhoto.isEmpty()) {
@@ -68,10 +71,13 @@ public class UserService {
         user.setFullName(dto.getFullName());
 
         if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
-            user.setPassword(dto.getPassword()); // TODO: encrypt password
+            user.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
 
         user.setMobile(dto.getMobile());
+        if (dto.getEmail() != null) {
+            user.setEmail(dto.getEmail());
+        }
         user.setRole(dto.getRole());
 
         if (profilePhoto != null && !profilePhoto.isEmpty()) {

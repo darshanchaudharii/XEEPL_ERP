@@ -9,6 +9,7 @@ public class UserDTO {
     private String fullName;
     private String username;
     private String mobile;
+    private String email;
     private UserRole role;
     private String profilePhoto;
 }

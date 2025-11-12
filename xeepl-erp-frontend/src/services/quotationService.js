@@ -59,12 +59,12 @@ editLine: async (lineId, data) => {
   return await patch(`${ENDPOINTS.QUOTATIONS}/lines/${lineId}`, data);
 },
 
-// Remove a line (soft delete)
+// Soft delete a quotation line (PATCH)
 removeLine: async (lineId) => {
   return await patch(`${ENDPOINTS.QUOTATIONS}/lines/${lineId}/remove`, {});
 },
 
-// Undo remove
+// Restore a removed quotation line (PATCH)
 undoRemoveLine: async (lineId) => {
   return await patch(`${ENDPOINTS.QUOTATIONS}/lines/${lineId}/undo`, {});
 },

@@ -19,4 +19,5 @@ public class QuotationLineUpdateDTO {
     private Boolean isRawMaterial;
     private Long parentItemId;
     private Long rawId;
+    private Boolean removed; // flag to indicate if line is soft deleted
 }

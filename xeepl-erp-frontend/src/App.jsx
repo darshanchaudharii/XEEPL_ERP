@@ -1,8 +1,9 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/common/Navbar';
 import Footer from './components/common/Footer';
 import Home from './components/home/Home';
+import AdminLogin from './components/auth/AdminLogin';
 import UserMaster from './components/users/UserMaster';
 import SectionMaster from './components/sections/SectionMaster';
 import ContentMaster from './components/contents/ContentMaster';
@@ -12,12 +13,26 @@ import CatalogMaster from './components/catalogs/CatalogMaster';
 import QuotationMaster from './components/quotations/QuotationMaster';
 import MakeQuotation from './components/quotations/MakeQuotation';
 import QuotationView from './components/quotations/QuotationView';
+import { authService } from './services/authService';
 import './App.css';
+
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const isAuthenticated = authService.isAuthenticated();
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+};
 
 function App() {
   return (
     <Router>
       <div className="app">
+        <Routes>
+          <Route path="/login" element={<AdminLogin />} />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <>
         <Navbar />
         <main className="main-content">
           <Routes>
@@ -34,6 +49,11 @@ function App() {
           </Routes>
         </main>
         <Footer />
+                </>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
       </div>
     </Router>
   );

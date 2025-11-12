@@ -3,7 +3,9 @@ import { catalogService } from '../../services/catalogService';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import Modal from '../common/Modal';
+import { formatDateToYYYYMMDD } from '../../utils/dateFormatter';
 import '../../styles/catalogmaster.css';
+import '../../styles/modern-table.css';
 
 const CatalogMaster = () => {
   const [catalogs, setCatalogs] = useState([]);
@@ -218,19 +220,27 @@ const CatalogMaster = () => {
               <i className="fas fa-list"></i>
               Catalogs List
             </h3>
-            <input
-              className="search-input"
-              placeholder="Search in table..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
           </div>
 
-          <div className="table-wrapper">
-            {loading ? (
-              <LoadingSpinner />
-            ) : (
-              <table className="data-table">
+          <div className="table-section">
+            {/* Search Bar - Flush above table */}
+            <div className="table-controls-bar">
+              <div className="search-input-wrapper">
+                <input
+                  className="table-search-input"
+                  placeholder="Search in table..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="table-wrapper">
+              {loading ? (
+                <LoadingSpinner />
+              ) : (
+                <table className="data-table modern-table">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -275,35 +285,37 @@ const CatalogMaster = () => {
                         </td>
                         <td>{catalog.description}</td>
                         <td>
-                          {catalog.createdOn
-                            ? new Date(catalog.createdOn).toLocaleDateString()
-                            : '—'
-                          }
+                          {formatDateToYYYYMMDD(catalog.createdOn)}
                         </td>
                         <td>
-                          <button
-                            className="btn btn-edit"
-                            onClick={() => handleEdit(catalog)}
-                          >
-                            <i className="fas fa-edit"></i>
-                            Edit
-                          </button>
+                          <div className="row-actions">
+                            <button
+                              className="btn btn-xs btn-edit"
+                              onClick={() => handleEdit(catalog)}
+                              title="Edit"
+                            >
+                              <i className="fas fa-edit"></i>
+                            </button>
+                          </div>
                         </td>
                         <td>
-                          <button
-                            className="btn btn-delete"
-                            onClick={() => openDeleteModal(catalog.id)}
-                          >
-                            <i className="fas fa-trash"></i>
-                            Delete
-                          </button>
+                          <div className="row-actions">
+                            <button
+                              className="btn btn-xs btn-delete"
+                              onClick={() => openDeleteModal(catalog.id)}
+                              title="Delete"
+                            >
+                              <i className="fas fa-trash"></i>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
-            )}
+              )}
+            </div>
           </div>
         </section>
       </div>

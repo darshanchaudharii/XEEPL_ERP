@@ -23,6 +23,9 @@ public class User {
 
     private String mobile;
 
+    @Column(unique = true)
+    private String email;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;

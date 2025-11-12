@@ -12,6 +12,7 @@ public class UserMapper {
         dto.setFullName(user.getFullName());
         dto.setUsername(user.getUsername());
         dto.setMobile(user.getMobile());
+        dto.setEmail(user.getEmail());
         dto.setRole(user.getRole());
         dto.setProfilePhoto(user.getProfilePhoto());
         return dto;

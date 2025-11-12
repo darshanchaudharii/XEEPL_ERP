@@ -6,9 +6,7 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Saira', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #f5f5f5;
@@ -114,6 +112,17 @@ code {
   overflow: hidden;
 }
 
+/* Special handling for table-card to allow datepicker overflow */
+.table-card {
+  overflow: visible !important;
+}
+
+/* Allow card body to overflow for datepicker */
+.form-card .card-body,
+.data-card .card-body {
+  overflow: visible;
+}
+
 .card-header {
   background: linear-gradient(135deg, #1f8a4c 0%, #2ecc71 100%);
   color: white;
@@ -155,7 +164,23 @@ code {
   border-radius: 4px;
   font-size: 14px;
   transition: border-color 0.3s;
-  font-family: inherit;
+  font-family: 'Saira', sans-serif;
+}
+
+/* Date input wrapper in forms */
+.form-group .date-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group .date-picker-wrapper {
+  width: 100%;
+}
+
+.form-group .modern-date-input {
+  width: 100%;
+  font-family: 'Saira', sans-serif;
 }
 
 .form-group input:focus,
@@ -191,6 +216,7 @@ code {
   align-items: center;
   gap: 8px;
   transition: all 0.3s;
+  font-family: 'Saira', sans-serif;
 }
 
 .btn:disabled {
@@ -270,12 +296,14 @@ code {
   border-bottom: 2px solid #e0e0e0;
   font-size: 14px;
   white-space: nowrap;
+  font-family: 'Saira', sans-serif;
 }
 
 .data-table td {
   padding: 12px;
   border-bottom: 1px solid #e0e0e0;
   font-size: 14px;
+  font-family: 'Saira', sans-serif;
 }
 
 .data-table tbody tr:hover {

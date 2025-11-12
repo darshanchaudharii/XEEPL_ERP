@@ -5,6 +5,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import Modal from '../common/Modal';
 import '../../styles/contentmaster.css';
+import '../../styles/modern-table.css';
 
 const ContentMaster = () => {
   const [contents, setContents] = useState([]);
@@ -210,7 +211,11 @@ const closeDeleteModal = () => {
       : new Date(value);
     if (isNaN(date.getTime())) return '—';
  
-    return date.toLocaleDateString();
+    // Format to yyyy/mm/dd
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}/${month}/${day}`;
   };
 
   return (
@@ -346,19 +351,27 @@ const closeDeleteModal = () => {
               <i className="fas fa-list"></i>
               Content List
             </h3>
-            <input
-              className="search-input"
-              placeholder="Search in table..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
           </div>
 
-          <div className="table-wrapper">
-            {loading ? (
-              <LoadingSpinner />
-            ) : (
-              <table className="data-table">
+          <div className="table-section">
+            {/* Search Bar - Flush above table */}
+            <div className="table-controls-bar">
+              <div className="search-input-wrapper">
+                <input
+                  className="table-search-input"
+                  placeholder="Search in table..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="table-wrapper">
+              {loading ? (
+                <LoadingSpinner />
+              ) : (
+                <table className="data-table modern-table">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -405,27 +418,34 @@ const closeDeleteModal = () => {
                           {formatDate(content._createdRaw)}
                         </td>
                         <td>
-                          <button className="btn btn-edit"
-                          onClick={() => handleEdit(content) }>
-                            <i className="fas fa-edit"></i>
-                            Edit
-                          </button>
+                          <div className="row-actions">
+                            <button 
+                              className="btn btn-xs btn-edit"
+                              onClick={() => handleEdit(content)}
+                              title="Edit"
+                            >
+                              <i className="fas fa-edit"></i>
+                            </button>
+                          </div>
                         </td>
                         <td>
-                          <button 
-                            className="btn btn-delete" 
-                            onClick={() => openDeleteModal(content.id)}
-                          >
-                            <i className="fas fa-trash"></i>
-                            Delete
-                          </button>
+                          <div className="row-actions">
+                            <button 
+                              className="btn btn-xs btn-delete" 
+                              onClick={() => openDeleteModal(content.id)}
+                              title="Delete"
+                            >
+                              <i className="fas fa-trash"></i>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     )))
                   }
                 </tbody>
               </table>
-            )}
+              )}
+            </div>
           </div>
         </section>
       </div>

@@ -5,6 +5,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import Modal from '../common/Modal';
 import '../../styles/usermaster.css';
+import '../../styles/modern-table.css';
 
 
 const UserMaster = () => {
@@ -24,9 +25,21 @@ const UserMaster = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, userId: null });
+  const [imageErrors, setImageErrors] = useState(new Set());
   const fileInputRef = useRef(null);
 
   useEffect(() => {
+    // Reset form when component mounts
+    setForm({
+      fullName: '',
+      username: '',
+      password: '',
+      mobile: '',
+      role: ''
+    });
+    setEditingId(null);
+    setPhotoFile(null);
+    setPhotoPreview(null);
     fetchUsers();
   }, []);
 
@@ -41,6 +54,7 @@ const UserMaster = () => {
     try {
       const data = await userService.getAllUsers();
       setUsers(data);
+      setImageErrors(new Set()); // Clear image errors when users are fetched
     } catch (err) {
       setError('Failed to fetch users: ' + err.message);
     } finally {
@@ -144,7 +158,7 @@ const UserMaster = () => {
       mobile: user.mobile || '',
       role: user.role || ''
     });
-    setPhotoPreview(user.profilePhoto ? `http://localhost:8080/uploads/${user.profilePhoto}` : null);
+    setPhotoPreview(user.profilePhoto ? `/uploads/${user.profilePhoto}` : null);
     setPhotoFile(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -279,19 +293,27 @@ const UserMaster = () => {
               <i className="fas fa-users"></i>
               Users
             </h3>
-            <input
-              className="search-input"
-              placeholder="Search in table..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
           </div>
 
-          <div className="table-wrapper">
-            {loading ? (
-              <LoadingSpinner />
-            ) : (
-              <table className="data-table">
+          <div className="table-section">
+            {/* Search Bar - Flush above table */}
+            <div className="table-controls-bar">
+              <div className="search-input-wrapper">
+                <input
+                  className="table-search-input"
+                  placeholder="Search in table..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="table-wrapper">
+              {loading ? (
+                <LoadingSpinner />
+              ) : (
+                <table className="data-table modern-table">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -314,11 +336,14 @@ const UserMaster = () => {
                       <tr key={user.id}>
                         <td>{user.id}</td>
                         <td>
-                          {user.profilePhoto ? (
+                          {user.profilePhoto && !imageErrors.has(user.id) ? (
                             <img 
-                              src={`http://localhost:8080/uploads/${user.profilePhoto}`} 
+                              src={`/uploads/${user.profilePhoto}`} 
                               alt={user.fullName}
                               className="table-avatar"
+                              onError={() => {
+                                setImageErrors(prev => new Set(prev).add(user.id));
+                              }}
                             />
                           ) : (
                             <div className="avatar-placeholder">
@@ -331,29 +356,34 @@ const UserMaster = () => {
                         <td>{user.mobile}</td>
                         <td><span className="badge">{user.role}</span></td>
                         <td>
-                          <button 
-                            className="btn btn-edit" 
-                            onClick={() => handleEdit(user)}
-                          >
-                            <i className="fas fa-edit"></i>
-                            Edit
-                          </button>
+                          <div className="row-actions">
+                            <button 
+                              className="btn btn-xs btn-edit" 
+                              onClick={() => handleEdit(user)}
+                              title="Edit"
+                            >
+                              <i className="fas fa-edit"></i>
+                            </button>
+                          </div>
                         </td>
                         <td>
-                          <button 
-                            className="btn btn-delete" 
-                            onClick={() => openDeleteModal(user.id)}
-                          >
-                            <i className="fas fa-trash"></i>
-                            Delete
-                          </button>
+                          <div className="row-actions">
+                            <button 
+                              className="btn btn-xs btn-delete" 
+                              onClick={() => openDeleteModal(user.id)}
+                              title="Delete"
+                            >
+                              <i className="fas fa-trash"></i>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
-            )}
+              )}
+            </div>
           </div>
         </section>
       </div>

@@ -1,18 +1,27 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { quotationService } from '../../services/quotationService';
+import { itemService } from '../../services/itemService';
+import { rawMaterialService } from '../../services/rawMaterialService';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import '../../styles/quotationview.css';
+import '../../styles/modern-table.css';
 import { downloadQuotationPDF } from '../../utils/pdfGenerator';
+import { getItemDescription, getRawMaterialDescription, groupQuotationLines } from '../../utils/quotationFormatter';
+import { formatDateString } from '../../utils/dateFormatter';
+
 const QuotationView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [quotation, setQuotation] = useState(null);
+  const [items, setItems] = useState([]);
+  const [rawMaterials, setRawMaterials] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showRawPrices, setShowRawPrices] = useState(true);
   const [showRemovedRaws, setShowRemovedRaws] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [editingLineId, setEditingLineId] = useState(null);
   const [editQty, setEditQty] = useState('');
   const [editRate, setEditRate] = useState('');
@@ -28,8 +37,15 @@ const QuotationView = () => {
     setLoading(true);
     setError('');
     try {
-      const data = await quotationService.getQuotationByIdWithRemoved(id, showRemovedRaws);
-      setQuotation(data);
+      // Fetch quotation, items, and raw materials in parallel
+      const [quotationData, itemsData, rawMaterialsData] = await Promise.all([
+        quotationService.getQuotationByIdWithRemoved(id, showRemovedRaws),
+        itemService.getAllItems(),
+        rawMaterialService.getAllRawMaterials()
+      ]);
+      setQuotation(quotationData);
+      setItems(itemsData);
+      setRawMaterials(rawMaterialsData);
     } catch (err) {
       setError('Failed to fetch quotation: ' + err.message);
     } finally {
@@ -45,17 +61,17 @@ const QuotationView = () => {
   try {
     setLoading(true);
     // Build ordered lines for PDF: items then their raws (a,b,...), exclude removed by default
-    const items = (quotation.items || []).filter(l => !l.isRawMaterial);
+    const quotationItems = (quotation.items || []).filter(l => !l.isRawMaterial && !l.removed);
     const raws = (quotation.items || []).filter(l => l.isRawMaterial);
     const orderedLines = [];
-    items.forEach(item => {
+    quotationItems.forEach(item => {
       orderedLines.push(item);
       const children = raws
         .filter(r => r.parentItemId === item.id && (!r.removed || showRemovedRaws))
         .sort((a, b) => a.id - b.id);
       children.forEach(r => orderedLines.push(r));
     });
-    await downloadQuotationPDF(quotation, orderedLines, { showRawPrices });
+    await downloadQuotationPDF(quotation, orderedLines, { showRawPrices, items, rawMaterials });
   } catch (err) {
     setError('Failed to generate PDF: ' + err.message);
   } finally {
@@ -188,11 +204,11 @@ const QuotationView = () => {
           </div>
           <div className="detail-row">
             <span className="detail-label">Date:</span>
-            <span className="detail-value">{quotation.date}</span>
+            <span className="detail-value">{formatDateString(quotation.date)}</span>
           </div>
           <div className="detail-row">
             <span className="detail-label">Expiry Date:</span>
-            <span className="detail-value">{quotation.expiryDate}</span>
+            <span className="detail-value">{formatDateString(quotation.expiryDate)}</span>
           </div>
           <div className="detail-row">
             <span className="detail-label">Status:</span>
@@ -259,7 +275,7 @@ const QuotationView = () => {
                 <div className="catalog-info">
                   <h4>{catalog.title}</h4>
                   <p>{catalog.description}</p>
-                  <small>Catalog ID: {catalog.id} | Linked on: {new Date().toLocaleDateString()}</small>
+                  <small>Catalog ID: {catalog.id} | Linked on: {formatDateString(new Date().toISOString().split('T')[0])}</small>
                 </div>
                 <button className="btn btn-view-catalog">
                   <i className="fas fa-eye"></i>
@@ -273,8 +289,39 @@ const QuotationView = () => {
 
       <div className="items-section">
         <h3>Quotation Lines</h3>
-        <div className="table-wrapper">
-          <table className="quotation-table">
+        <div className="table-section">
+          {/* Search and Filter Bar - Flush above table */}
+          <div className="table-controls-bar">
+            <div className="search-input-wrapper">
+              <input
+                type="text"
+                placeholder="Search in table..."
+                className="table-search-input"
+                value={searchQuery || ''}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <label className="modern-toggle">
+              <input
+                type="checkbox"
+                checked={showRawPrices}
+                onChange={(e) => setShowRawPrices(e.target.checked)}
+              />
+              <span>Show raw prices</span>
+            </label>
+            <label className="modern-toggle">
+              <input
+                type="checkbox"
+                checked={showRemovedRaws}
+                onChange={(e) => setShowRemovedRaws(e.target.checked)}
+              />
+              <span>Show removed raws</span>
+            </label>
+          </div>
+
+          {/* Table */}
+          <div className="table-wrapper">
+            <table className="quotation-table modern-table">
             <thead>
               <tr>
                 <th>Sr No</th>
@@ -287,15 +334,46 @@ const QuotationView = () => {
             </thead>
             <tbody>
               {quotation.items && quotation.items.length > 0 ? (
-                // Render items with nested raws
+                // Group quotation lines hierarchically: items with their nested raw materials
+                // This ensures raw materials are displayed as sub-rows (a), b), c)) under their parent items
+                // and NOT as separate top-level numbered rows
                 (() => {
-                  const items = quotation.items.filter(l => !l.isRawMaterial && !l.removed);
-                  const raws = quotation.items.filter(l => l.isRawMaterial);
-                  return items.map((item, index) => (
+                  // Separate active and removed lines
+                  let activeLines = quotation.items.filter(l => !l.removed);
+                  const removedLines = showRemovedRaws ? quotation.items.filter(l => l.removed) : [];
+                  
+                  // Apply search filter if searchQuery is provided
+                  if (searchQuery && searchQuery.trim()) {
+                    const query = searchQuery.toLowerCase();
+                    activeLines = activeLines.filter(line => 
+                      line.itemDescription?.toLowerCase().includes(query) ||
+                      getItemDescription(line, items)?.toLowerCase().includes(query)
+                    );
+                  }
+                  
+                  // Group lines using the helper function (same logic as MakeQuotation)
+                  const grouped = groupQuotationLines(activeLines, removedLines, showRemovedRaws);
+                  
+                  return grouped.map(({ item, raws }, index) => (
                     <React.Fragment key={item.id}>
+                      {/* Parent ITEM Row - Numbered (1, 2, 3...) */}
                       <tr>
                         <td>{index + 1}</td>
-                        <td><strong>{item.itemDescription}</strong></td>
+                        <td>
+                          <div>
+                            {/* Item name in bold */}
+                            <strong>{item.itemDescription}</strong>
+                            {/* Item description below in normal, small, gray font */}
+                            {(() => {
+                              const itemDesc = getItemDescription(item, items);
+                              return itemDesc ? (
+                                <div style={{ fontSize: '12px', color: '#666', marginTop: 4, fontStyle: 'normal' }}>
+                                  {itemDesc}
+                                </div>
+                              ) : null;
+                            })()}
+                          </div>
+                        </td>
                         <td>
                           {editingLineId === item.id ? (
                             <input type="number" value={editQty} onChange={(e) => setEditQty(e.target.value)} min="1" />
@@ -325,33 +403,50 @@ const QuotationView = () => {
                           )}
                         </td>
                       </tr>
-                      {/* RAW children */}
-                      {raws
-                        .filter(r => r.parentItemId === item.id && (!r.removed || showRemovedRaws))
-                        .sort((a, b) => a.id - b.id)
-                        .map((raw, rawIndex) => (
-                          <tr key={raw.id} className={raw.removed ? 'row-removed' : ''}>
+                      
+                      {/* Nested RAW Material Rows - Lettered (a), b), c)...) */}
+                      {/* These are displayed as indented sub-rows under their parent item */}
+                      {/* They should NEVER appear as separate top-level numbered rows */}
+                      {raws.map((raw, rawIndex) => {
+                        const isRemoved = raw.removed || raw._removed;
+                        return (
+                          <tr key={isRemoved ? `removed-${raw.id}` : raw.id} className={isRemoved ? 'row-removed' : ''}>
                             <td></td>
                             <td style={{ paddingLeft: 24 }}>
-                              {String.fromCharCode(97 + rawIndex)}) {raw.itemDescription} {raw.removed ? <em>(Removed)</em> : ''}
+                              <div>
+                                {/* Raw material name in bold, preceded by letter (a), b), c)) */}
+                                <strong>
+                                  {String.fromCharCode(97 + rawIndex)}) {isRemoved ? <><s>{raw.itemDescription}</s></> : raw.itemDescription}
+                                </strong>
+                                {isRemoved && <em> (Removed)</em>}
+                                {/* Raw material description below in normal, small, gray font */}
+                                {(() => {
+                                  const rawDesc = getRawMaterialDescription(raw, rawMaterials);
+                                  return rawDesc ? (
+                                    <div style={{ fontSize: '12px', color: '#666', marginTop: 4, fontStyle: 'normal' }}>
+                                      {rawDesc}
+                                    </div>
+                                  ) : null;
+                                })()}
+                              </div>
                             </td>
                             <td>
-                              {editingLineId === raw.id ? (
+                              {editingLineId === raw.id && !isRemoved ? (
                                 <input type="number" value={editQty} onChange={(e) => setEditQty(e.target.value)} min="1" />
                               ) : (
-                                raw.removed ? <s>{raw.quantity}</s> : raw.quantity
+                                isRemoved ? <s>{raw.quantity}</s> : raw.quantity
                               )}
                             </td>
                             <td>
-                              {editingLineId === raw.id ? (
+                              {editingLineId === raw.id && !isRemoved ? (
                                 <input type="number" value={editRate} onChange={(e) => setEditRate(e.target.value)} step="0.01" />
                               ) : (
-                                showRawPrices ? (raw.removed ? <s>₹{Number(raw.unitPrice).toFixed(2)}</s> : `₹${Number(raw.unitPrice).toFixed(2)}`) : '—'
+                                showRawPrices ? (isRemoved ? <s>₹{Number(raw.unitPrice).toFixed(2)}</s> : `₹${Number(raw.unitPrice).toFixed(2)}`) : '—'
                               )}
                             </td>
                             <td>—</td>
                             <td>
-                              {raw.removed ? (
+                              {isRemoved ? (
                                 <div className="row-actions">
                                   <button className="btn btn-xs btn-undo" onClick={() => handleUndo(raw.id)} title="Undo"><i className="fas fa-undo"></i></button>
                                 </div>
@@ -368,7 +463,8 @@ const QuotationView = () => {
                               )}
                             </td>
                           </tr>
-                        ))}
+                        );
+                      })}
                     </React.Fragment>
                   ));
                 })()
@@ -386,20 +482,7 @@ const QuotationView = () => {
               </tr>
             </tfoot>
           </table>
-        </div>
-
-        <div style={{ display: 'flex', gap: 12, marginTop: 10, alignItems: 'center' }}>
-          <label className="toggle-label">
-            <input type="checkbox" checked={showRawPrices} onChange={(e) => setShowRawPrices(e.target.checked)} />
-            Show raw prices
-          </label>
-          <label className="toggle-label">
-            <input type="checkbox" checked={showRemovedRaws} onChange={(e) => setShowRemovedRaws(e.target.checked)} />
-            Show removed raws
-          </label>
-        </div>
-        <div className="table-note">
-          <small>Note: Serial No applies to ITEM rows. RAW rows are shown as a), b), ...</small>
+          </div>
         </div>
       </div>
     </div>

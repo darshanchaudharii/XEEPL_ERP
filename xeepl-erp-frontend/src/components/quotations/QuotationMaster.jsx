@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { quotationService } from '../../services/quotationService';
 import { QUOTATION_STATUS } from '../../utils/constants';
+import { formatDateString } from '../../utils/dateFormatter';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import Modal from '../common/Modal';
 import '../../styles/quotationmaster.css';
+import '../../styles/modern-table.css';
+import '../../styles/datepicker-custom.css';
 
 const QuotationMaster = () => {
   const navigate = useNavigate();
@@ -13,15 +18,15 @@ const QuotationMaster = () => {
   const [filteredQuotations, setFilteredQuotations] = useState([]);
   const [form, setForm] = useState({
     name: '',
-    date: '',
-    expiryDate: '',
+    date: null,
+    expiryDate: null,
     status: 'DRAFT'
   });
   const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [dateFromFilter, setDateFromFilter] = useState('');
-  const [dateToFilter, setDateToFilter] = useState('');
+  const [dateFromFilter, setDateFromFilter] = useState(null);
+  const [dateToFilter, setDateToFilter] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, quotationId: null });
@@ -46,10 +51,12 @@ const QuotationMaster = () => {
 
     // Date range filter
     if (dateFromFilter) {
-      filtered = filtered.filter(q => q.date >= dateFromFilter);
+      const fromDateStr = dateFromFilter.toISOString().split('T')[0];
+      filtered = filtered.filter(q => q.date >= fromDateStr);
     }
     if (dateToFilter) {
-      filtered = filtered.filter(q => q.date <= dateToFilter);
+      const toDateStr = dateToFilter.toISOString().split('T')[0];
+      filtered = filtered.filter(q => q.date <= toDateStr);
     }
 
     setFilteredQuotations(filtered);
@@ -81,11 +88,15 @@ const QuotationMaster = () => {
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleDateChange = (name, date) => {
+    setForm(prev => ({ ...prev, [name]: date }));
+  };
+
   const resetForm = () => {
     setForm({
       name: '',
-      date: '',
-      expiryDate: '',
+      date: null,
+      expiryDate: null,
       status: 'DRAFT'
     });
     setEditingId(null);
@@ -102,10 +113,11 @@ const QuotationMaster = () => {
 
     setLoading(true);
     try {
+      // Convert Date objects to YYYY-MM-DD strings for backend
       const quotationData = {
         name: form.name,
-        date: form.date,
-        expiryDate: form.expiryDate,
+        date: form.date.toISOString().split('T')[0],
+        expiryDate: form.expiryDate.toISOString().split('T')[0],
         status: form.status,
         items: []
       };
@@ -127,10 +139,17 @@ const QuotationMaster = () => {
 
   const handleEdit = (quotation) => {
     setEditingId(quotation.id);
+    // Convert date strings to Date objects for DatePicker
+    const parseDate = (dateStr) => {
+      if (!dateStr) return null;
+      // Handle YYYY-MM-DD format from backend
+      const date = new Date(dateStr);
+      return isNaN(date.getTime()) ? null : date;
+    };
     setForm({
       name: quotation.name,
-      date: quotation.date,
-      expiryDate: quotation.expiryDate,
+      date: parseDate(quotation.date),
+      expiryDate: parseDate(quotation.expiryDate),
       status: quotation.status
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -166,8 +185,8 @@ const QuotationMaster = () => {
 
   const clearFilters = () => {
     setStatusFilter('');
-    setDateFromFilter('');
-    setDateToFilter('');
+    setDateFromFilter(null);
+    setDateToFilter(null);
   };
 
   return (
@@ -201,11 +220,14 @@ const QuotationMaster = () => {
               <label>
                 Quotation Date <span className="required">*</span>
               </label>
-              <input
-                type="date"
-                name="date"
-                value={form.date}
-                onChange={handleChange}
+              <DatePicker
+                selected={form.date}
+                onChange={(date) => handleDateChange('date', date)}
+                dateFormat="yyyy/MM/dd"
+                placeholderText="YYYY/MM/DD"
+                className="modern-date-input"
+                wrapperClassName="date-picker-wrapper"
+                popperPlacement="bottom-start"
                 required
               />
             </div>
@@ -214,11 +236,15 @@ const QuotationMaster = () => {
               <label>
                 Quotation Expiry Date <span className="required">*</span>
               </label>
-              <input
-                type="date"
-                name="expiryDate"
-                value={form.expiryDate}
-                onChange={handleChange}
+              <DatePicker
+                selected={form.expiryDate}
+                onChange={(date) => handleDateChange('expiryDate', date)}
+                dateFormat="yyyy/MM/dd"
+                placeholderText="YYYY/MM/DD"
+                className="modern-date-input"
+                wrapperClassName="date-picker-wrapper"
+                minDate={form.date}
+                popperPlacement="bottom-start"
                 required
               />
             </div>
@@ -251,59 +277,73 @@ const QuotationMaster = () => {
               <i className="fas fa-list"></i>
               Quotations List
             </h3>
-            <div className="header-actions">
-              <input
-                className="search-input"
-                placeholder="Search by name / id / status..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+          </div>
+
+          <div className="table-section">
+            {/* Search and Filter Bar - Flush above table */}
+            <div className="table-controls-bar">
+              <div className="search-input-wrapper">
+                <input
+                  className="table-search-input"
+                  placeholder="Search by name / id / status..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="filters-row">
-            <select 
-              value={statusFilter} 
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">All Statuses</option>
-              {QUOTATION_STATUS.map(status => (
-                <option key={status} value={status}>{status}</option>
-              ))}
-            </select>
+            {/* Filter Controls Row */}
+            <div className="filter-controls-row">
+              <select 
+                className="modern-select"
+                value={statusFilter} 
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="">All Statuses</option>
+                {QUOTATION_STATUS.map(status => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
 
-            <input
-              type="date"
-              placeholder="mm/dd/yyyy"
-              value={dateFromFilter}
-              onChange={(e) => setDateFromFilter(e.target.value)}
-            />
+              <DatePicker
+                selected={dateFromFilter}
+                onChange={(date) => setDateFromFilter(date)}
+                dateFormat="yyyy/MM/dd"
+                placeholderText="YYYY/MM/DD"
+                className="modern-date-input"
+                wrapperClassName="date-picker-wrapper"
+                selectsStart
+                startDate={dateFromFilter}
+                endDate={dateToFilter}
+                popperPlacement="bottom-start"
+              />
 
-            <input
-              type="date"
-              placeholder="mm/dd/yyyy"
-              value={dateToFilter}
-              onChange={(e) => setDateToFilter(e.target.value)}
-            />
+              <DatePicker
+                selected={dateToFilter}
+                onChange={(date) => setDateToFilter(date)}
+                dateFormat="yyyy/MM/dd"
+                placeholderText="YYYY/MM/DD"
+                className="modern-date-input"
+                wrapperClassName="date-picker-wrapper"
+                selectsEnd
+                startDate={dateFromFilter}
+                endDate={dateToFilter}
+                minDate={dateFromFilter}
+                popperPlacement="bottom-start"
+              />
 
-            <button className="btn btn-clear" onClick={clearFilters}>
-              <i className="fas fa-times"></i>
-              Clear
-            </button>
-          </div>
+              <button className="btn btn-xs btn-cancel" onClick={clearFilters}>
+                <i className="fas fa-times"></i>
+                Clear Filters
+              </button>
+            </div>
 
-          <div className="table-tip">
-            <small>
-              <i className="fas fa-info-circle"></i>
-              Tip: search matches anywhere in the row. Date filters expect YYYY-MM-DD.
-            </small>
-          </div>
-
-          <div className="table-wrapper">
+            {/* Table */}
+            <div className="table-wrapper">
             {loading ? (
               <LoadingSpinner />
             ) : (
-              <table className="data-table">
+              <table className="data-table modern-table">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -326,39 +366,45 @@ const QuotationMaster = () => {
                       <tr key={quotation.id}>
                         <td>{quotation.id}</td>
                         <td>{quotation.name}</td>
-                        <td>{quotation.date}</td>
-                        <td>{quotation.expiryDate}</td>
+                        <td>{formatDateString(quotation.date)}</td>
+                        <td>{formatDateString(quotation.expiryDate)}</td>
                         <td>
                           <span className={`badge badge-status-${quotation.status.toLowerCase()}`}>
                             {quotation.status}
                           </span>
                         </td>
                         <td>
-                          <button 
-                            className="btn btn-view" 
-                            onClick={() => handleView(quotation.id)}
-                          >
-                            <i className="fas fa-eye"></i>
-                            View
-                          </button>
+                          <div className="row-actions">
+                            <button 
+                              className="btn btn-xs btn-view" 
+                              onClick={() => handleView(quotation.id)}
+                              title="View"
+                            >
+                              <i className="fas fa-eye"></i>
+                            </button>
+                          </div>
                         </td>
                         <td>
-                          <button 
-                            className="btn btn-edit" 
-                            onClick={() => handleEdit(quotation)}
-                          >
-                            <i className="fas fa-edit"></i>
-                            Edit
-                          </button>
+                          <div className="row-actions">
+                            <button 
+                              className="btn btn-xs btn-edit" 
+                              onClick={() => handleEdit(quotation)}
+                              title="Edit"
+                            >
+                              <i className="fas fa-edit"></i>
+                            </button>
+                          </div>
                         </td>
                         <td>
-                          <button 
-                            className="btn btn-delete" 
-                            onClick={() => openDeleteModal(quotation.id)}
-                          >
-                            <i className="fas fa-trash"></i>
-                            Delete
-                          </button>
+                          <div className="row-actions">
+                            <button 
+                              className="btn btn-xs btn-delete" 
+                              onClick={() => openDeleteModal(quotation.id)}
+                              title="Delete"
+                            >
+                              <i className="fas fa-trash"></i>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -366,6 +412,7 @@ const QuotationMaster = () => {
                 </tbody>
               </table>
             )}
+            </div>
           </div>
         </section>
       </div>

@@ -72,17 +72,16 @@ public class QuotationController {
         return ResponseEntity.ok(service.editLine(lineId, dto));
     }
 
-    // Remove/undo a raw line (soft delete)
+    // Soft delete a quotation line
     @PatchMapping("/lines/{lineId}/remove")
-    public ResponseEntity<Void> removeLine(@PathVariable Long lineId) {
-        service.markLineRemoved(lineId);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<QuotationLineDTO> removeLine(@PathVariable Long lineId) {
+        return ResponseEntity.ok(service.removeLine(lineId));
     }
 
+    // Restore a removed quotation line
     @PatchMapping("/lines/{lineId}/undo")
-    public ResponseEntity<Void> undoRemoveLine(@PathVariable Long lineId) {
-        service.restoreRemovedLine(lineId);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<QuotationLineDTO> undoRemoveLine(@PathVariable Long lineId) {
+        return ResponseEntity.ok(service.undoRemoveLine(lineId));
     }
 
     // Finalize quotation and snapshot

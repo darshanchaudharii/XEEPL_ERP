@@ -4,12 +4,16 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  font-family: 'Saira', sans-serif;
 }
 
 .main-content {
   flex: 1;
   padding: 0;
+  padding-top: 70px; /* Add padding to account for fixed navbar */
   background-color: #f5f5f5;
+  font-family: 'Saira', sans-serif;
+  min-height: calc(100vh - 70px);
 }
 
 /* Page Container */
@@ -24,6 +28,7 @@
   font-weight: 600;
   color: #1f8a4c;
   margin-bottom: 20px;
+  font-family: 'Saira', sans-serif;
 }
 
 /* Master Content Layout - For CRUD pages */

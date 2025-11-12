@@ -14,7 +14,7 @@
   --white: #ffffff;
   --black: #000000;
   
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Saira', sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
@@ -39,11 +39,13 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background-color: var(--light-gray);
+  font-family: 'Saira', sans-serif;
 }
 
 h1, h2, h3, h4, h5, h6 {
   margin: 0;
   padding: 0;
+  font-family: 'Saira', sans-serif;
 }
 
 a {
@@ -58,12 +60,12 @@ a:hover {
 }
 
 button {
-  font-family: inherit;
+  font-family: 'Saira', sans-serif;
   cursor: pointer;
 }
 
 input, select, textarea {
-  font-family: inherit;
+  font-family: 'Saira', sans-serif;
 }
 
 /* Utility Classes */
