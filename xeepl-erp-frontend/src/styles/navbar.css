@@ -117,30 +117,121 @@
   box-shadow: 0 4px 6px rgba(0,0,0,0.15);
 }
 
+/* Hamburger Button */
+.navbar-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+  z-index: 1001;
+}
+
+.navbar-hamburger:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.navbar-hamburger:focus {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+/* Off-canvas Overlay */
+.navbar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  display: none;
+}
+
+/* Mobile Styles */
 @media (max-width: 768px) {
   .navbar {
-    padding: 15px;
+    padding: 12px 15px;
+    flex-wrap: nowrap;
   }
   
   .navbar-brand {
-    margin-bottom: 10px;
+    margin-bottom: 0;
+    flex: 1;
+  }
+  
+  .navbar-hamburger {
+    display: flex;
   }
   
   .navbar-menu {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 280px;
+    max-width: 85vw;
+    height: 100vh;
+    background: linear-gradient(135deg, #1f8a4c 0%, #2ecc71 100%);
     flex-direction: column;
-    gap: 5px;
+    gap: 0;
+    padding: 70px 20px 20px;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
+    transition: right 0.3s ease-in-out;
+    overflow-y: auto;
+    z-index: 1000;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+  
+  .navbar-menu-open {
+    right: 0;
+  }
+  
+  .navbar-overlay {
+    display: block;
   }
   
   .navbar-menu li {
     width: 100%;
+    margin: 0;
   }
   
   .navbar-menu a {
     width: 100%;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
   }
   
-  .navbar-menu a.logout {
+  .navbar-menu .user-info {
     margin-left: 0;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .navbar-menu .user-name {
+    padding: 12px 16px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .navbar-menu .logout-button {
+    width: 100%;
+    min-height: 44px;
+    margin-top: 10px;
   }
 }
 

@@ -14,4 +14,5 @@ public class QuotationLineDTO {
     private Long parentItemId;
     private Long rawId;
     private Boolean removed;
+    private Integer sequence;
 }

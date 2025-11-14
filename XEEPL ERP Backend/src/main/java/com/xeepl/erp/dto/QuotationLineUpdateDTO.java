@@ -20,4 +20,5 @@ public class QuotationLineUpdateDTO {
     private Long parentItemId;
     private Long rawId;
     private Boolean removed; // flag to indicate if line is soft deleted
+    private Integer sequence; // order in which line appears in the quotation
 }

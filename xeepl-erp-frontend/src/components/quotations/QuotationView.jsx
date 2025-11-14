@@ -20,7 +20,7 @@ const QuotationView = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showRawPrices, setShowRawPrices] = useState(true);
-  const [showRemovedRaws, setShowRemovedRaws] = useState(false);
+  const [showRemovedRaws, setShowRemovedRaws] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingLineId, setEditingLineId] = useState(null);
   const [editQty, setEditQty] = useState('');

@@ -7,7 +7,6 @@ import {
 } from './api';
 
 export const contentService = {
-  // Get all contents
   getAllContents: async (sectionId = null) => {
     const endpoint = sectionId 
       ? `${ENDPOINTS.CONTENTS}?sectionId=${sectionId}` 
@@ -15,16 +14,13 @@ export const contentService = {
     return await get(endpoint);
   },
 
-  // Get content by ID
   getContentById: async (id) => {
     return await get(`${ENDPOINTS.CONTENTS}/${id}`);
   },
 
-  // Create content
   createContent: async (contentData, imageFile) => {
     const formData = new FormData();
     
-    // Append each field individually
     Object.keys(contentData).forEach(key => {
       if (contentData[key] !== null && contentData[key] !== undefined) {
         formData.append(key, contentData[key]);
@@ -40,7 +36,6 @@ export const contentService = {
    updateContent:async (id, contentData, imageFile) => {
     const formData = new FormData();
     
-    // Create content DTO object with proper type conversions
     const contentDto = {
       sectionId: parseInt(contentData.sectionId),
       title: contentData.title,
@@ -50,13 +45,11 @@ export const contentService = {
       link: contentData.link || ''
     };
 
-    // Add contentDto as JSON Blob (ensures Spring @RequestPart parsing)
     formData.append(
       'contentDto',
       new Blob([JSON.stringify(contentDto)], { type: 'application/json' })
     );
 
-    // Add image file if present
     if (imageFile) {
       formData.append('imageFile', imageFile);
     }
@@ -65,9 +58,7 @@ export const contentService = {
 
     return await put(`${ENDPOINTS.CONTENTS}/${id}`, formData);
     },
-  
 
-  // Delete content
   deleteContent: async (id) => {
     return await del(`${ENDPOINTS.CONTENTS}/${id}`);
   }

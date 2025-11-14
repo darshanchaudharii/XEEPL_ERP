@@ -30,7 +30,7 @@ public class User {
     @Column(nullable = false)
     private UserRole role;
 
-    private String profilePhoto; // File name or relative path
+    private String profilePhoto;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

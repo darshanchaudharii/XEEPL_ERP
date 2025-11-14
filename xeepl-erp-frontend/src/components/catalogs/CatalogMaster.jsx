@@ -31,7 +31,14 @@ const CatalogMaster = () => {
     setError('');
     try {
       const data = await catalogService.getAllCatalogs();
-      setCatalogs(data || []);
+      // Sort catalogs by ID descending (newest first)
+      const sortedData = (data || []).sort((a, b) => {
+        // Handle both numeric and string IDs
+        const idA = typeof a.id === 'number' ? a.id : parseInt(a.id) || 0;
+        const idB = typeof b.id === 'number' ? b.id : parseInt(b.id) || 0;
+        return idB - idA;
+      });
+      setCatalogs(sortedData);
     } catch (err) {
       setError('Failed to fetch catalogs: ' + (err.message || err));
     } finally {
@@ -40,18 +47,18 @@ const CatalogMaster = () => {
   };
 
   const filterCatalogs = useCallback(() => {
-    if (!search.trim()) {
-      setFilteredCatalogs(catalogs);
-      return;
+    let result = catalogs;
+    
+    if (search.trim()) {
+      const searchLower = search.toLowerCase();
+      result = catalogs.filter(catalog =>
+        String(catalog.id).includes(searchLower) ||
+        (catalog.title || '').toLowerCase().includes(searchLower) ||
+        (catalog.description || '').toLowerCase().includes(searchLower)
+      );
     }
-
-    const searchLower = search.toLowerCase();
-    const filtered = catalogs.filter(catalog =>
-      String(catalog.id).includes(searchLower) ||
-      (catalog.title || '').toLowerCase().includes(searchLower) ||
-      (catalog.description || '').toLowerCase().includes(searchLower)
-    );
-    setFilteredCatalogs(filtered);
+    
+    setFilteredCatalogs(result);
   }, [search, catalogs]);
 
   useEffect(() => {
@@ -107,8 +114,13 @@ const CatalogMaster = () => {
         await catalogService.createCatalog(catalogData, file);
       }
 
+      // Clear search to show all catalogs including the newly added one
+      setSearch('');
       await fetchCatalogs();
       resetForm();
+      
+      // Scroll to top to see the newly added catalog (which will be first due to sorting)
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       setError(err.message || 'Something went wrong');
     } finally {
@@ -263,25 +275,18 @@ const CatalogMaster = () => {
                         <td>{catalog.id}</td>
                         <td>{catalog.title}</td>
                         <td>
-                          {/* Prefer direct backend URL if you want browser-native open (works without auth).
-                              Use programmatic download (below) if you need to attach auth header or force save. */}
-                          <a
-                            href={`/api/catalogs/download/files/${catalog.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-download"
-                          >
-                            <i className="fas fa-download"></i> Download
-                          </a>
-
-                          {/* Example for programmatic download (uncomment if you prefer):
                           <button
                             className="btn btn-download"
-                            onClick={() => downloadCatalogFile(catalog.id, catalog.fileName)}
+                            onClick={async () => {
+                              try {
+                                await catalogService.downloadCatalogFile(catalog);
+                              } catch (err) {
+                                setError('Failed to download catalog: ' + err.message);
+                              }
+                            }}
                           >
                             <i className="fas fa-download"></i> Download
                           </button>
-                          */}
                         </td>
                         <td>{catalog.description}</td>
                         <td>

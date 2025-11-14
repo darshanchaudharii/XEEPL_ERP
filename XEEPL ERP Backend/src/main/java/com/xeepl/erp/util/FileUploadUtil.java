@@ -52,7 +52,7 @@ public class FileUploadUtil {
     }
 
     /**
-     * Delete relative file path under uploads root.
+      Delete relative file path under uploads root.
      */
     public void deleteFile(String relativePath) {
         if (relativePath == null || relativePath.isBlank()) return;
@@ -64,7 +64,7 @@ public class FileUploadUtil {
         }
     }
 
-    /**
+    /*
      * Validate that the uploaded file is an image of allowed type/size.
      */
     public void validateImageFile(MultipartFile file, long maxSizeBytes) {
@@ -80,7 +80,7 @@ public class FileUploadUtil {
         }
     }
 
-    /**
+    /*
      * Validate that the uploaded file is a permitted document/image for catalogs etc.
      */
     public void validateFile(MultipartFile file) {

@@ -93,29 +93,58 @@
 /* Responsive */
 @media (max-width: 768px) {
   .modal-overlay {
-    padding: 10px;
+    padding: 0;
+    align-items: flex-start;
   }
   
   .modal-content {
-    max-height: 95vh;
+    max-height: 100vh;
+    height: 100vh;
+    max-width: 100%;
+    width: 100%;
+    border-radius: 0;
+    margin: 0;
+  }
+  
+  .modal-content.modal-small,
+  .modal-content.modal-medium,
+  .modal-content.modal-large {
+    max-width: 100%;
+    width: 100%;
   }
   
   .modal-header {
     padding: 15px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 1;
   }
   
   .modal-body {
     padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    -webkit-overflow-scrolling: touch;
   }
   
   .modal-footer {
     padding: 15px 20px;
     flex-direction: column-reverse;
+    position: sticky;
+    bottom: 0;
+    background: white;
+    border-top: 1px solid #e0e0e0;
   }
   
   .modal-footer .btn {
     width: 100%;
     justify-content: center;
+    min-height: 44px;
+  }
+  
+  .modal-close {
+    min-width: 44px;
+    min-height: 44px;
   }
 }
 

@@ -63,7 +63,6 @@ public class QuotationController {
         return ResponseEntity.noContent().build();
     }
 
-    // Edit single line
     @PatchMapping("/lines/{lineId}")
     public ResponseEntity<QuotationLineDTO> editLine(
             @PathVariable Long lineId,
@@ -72,30 +71,25 @@ public class QuotationController {
         return ResponseEntity.ok(service.editLine(lineId, dto));
     }
 
-    // Soft delete a quotation line
     @PatchMapping("/lines/{lineId}/remove")
     public ResponseEntity<QuotationLineDTO> removeLine(@PathVariable Long lineId) {
         return ResponseEntity.ok(service.removeLine(lineId));
     }
 
-    // Restore a removed quotation line
     @PatchMapping("/lines/{lineId}/undo")
     public ResponseEntity<QuotationLineDTO> undoRemoveLine(@PathVariable Long lineId) {
         return ResponseEntity.ok(service.undoRemoveLine(lineId));
     }
 
-    // Finalize quotation and snapshot
     @PostMapping("/{id}/finalize")
     public ResponseEntity<QuotationDTO> finalizeQuotation(@PathVariable Long id) {
         return ResponseEntity.ok(service.finalizeQuotation(id));
     }
 
-    // Export PDF stub (return 204 here; wire actual PDF generation later)
     @GetMapping("/{id}/export-pdf")
     public void exportPdf(@PathVariable Long id, HttpServletResponse response) throws IOException {
         response.setContentType("application/pdf");
         response.setHeader("Content-Disposition", "attachment; filename=quotation_" + id + ".pdf");
-        // minimal stub: empty PDF bytes or message. For now write nothing to keep stub simple.
         response.getOutputStream().flush();
     }
 }

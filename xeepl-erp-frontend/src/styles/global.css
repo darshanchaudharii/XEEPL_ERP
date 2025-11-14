@@ -1,5 +1,66 @@
 /* Global Styles */
 
+/* ============================================
+   CSS VARIABLES & BREAKPOINTS (Mobile-First)
+   ============================================ */
+
+:root {
+  /* Breakpoints */
+  --bp-mobile: 480px;
+  --bp-tablet: 768px;
+  --bp-laptop: 1025px;
+  --bp-desktop: 1367px;
+
+  /* Colors */
+  --color-primary: #1f8a4c;
+  --color-primary-light: #2ecc71;
+  --color-secondary: #3498db;
+  --color-danger: #e74c3c;
+  --color-warning: #f39c12;
+  --color-success: #27ae60;
+  --color-text: #333;
+  --color-text-light: #666;
+  --color-text-muted: #999;
+  --color-border: #e0e0e0;
+  --color-background: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f8f9fa;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Touch targets */
+  --touch-target-min: 44px;
+
+  /* Transitions */
+  --transition-fast: 0.15s;
+  --transition-base: 0.3s;
+  --transition-slow: 0.5s;
+}
+
+/* Utility Classes */
+.mobile-only {
+  display: block;
+}
+
+.desktop-only {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none;
+  }
+  
+  .desktop-only {
+    display: block;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -467,6 +528,40 @@ code {
   margin-top: 25px;
   padding-top: 20px;
   border-top: 1px solid #e0e0e0;
+}
+
+/* App Grid Layout */
+.app-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+}
+
+@media (min-width: 769px) {
+  .app-grid {
+    grid-template-columns: 240px 1fr;
+  }
+}
+
+/* Touch-friendly inputs and buttons on mobile */
+@media (max-width: 768px) {
+  .btn,
+  input[type="button"],
+  input[type="submit"],
+  button {
+    min-height: var(--touch-target-min);
+    padding: 12px 16px;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  select,
+  textarea {
+    min-height: var(--touch-target-min);
+    padding: 12px;
+  }
 }
 
 /* Responsive */

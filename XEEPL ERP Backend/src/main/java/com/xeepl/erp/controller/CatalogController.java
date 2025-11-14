@@ -80,11 +80,9 @@ public class CatalogController {
         Catalog catalog = catalogRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Catalog not found with id: " + id));
 
-        // Use the absolute file path directly for testing
-        // To make it robust, you could use catalog.getFilePath() if it stores the full absolute path, or prepend as shown below.
-        String absoluteFilePath = "D:/XEEPL ERP/XEEPL ERP Backend/uploads/" + catalog.getFilePath().replace("\\", "/");
-        Path filePath = Paths.get(absoluteFilePath).normalize();
-
+        String userDir = System.getProperty("user.dir");
+        Path uploadBasePath = Paths.get(userDir, "uploads").normalize();
+        Path filePath = uploadBasePath.resolve(catalog.getFilePath()).normalize();
 
         Resource resource = new UrlResource(filePath.toUri());
 

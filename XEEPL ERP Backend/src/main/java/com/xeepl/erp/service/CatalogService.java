@@ -38,14 +38,14 @@ public class CatalogService {
             catalogs = catalogRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(search, search);
         }
         return catalogs.stream()
-                .map(c -> catalogMapper.toDto(c, downloadBaseUrl + "/api/catalogs/download/" + c.getFilePath()))
+                .map(c -> catalogMapper.toDto(c, downloadBaseUrl + "/api/catalogs/download/files/" + c.getId()))
                 .collect(Collectors.toList());
     }
 
     public CatalogDTO getCatalogById(Long id) {
         Catalog catalog = catalogRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Catalog not found"));
-        return catalogMapper.toDto(catalog, downloadBaseUrl + "/api/catalogs/download/" + catalog.getFilePath());
+        return catalogMapper.toDto(catalog, downloadBaseUrl + "/api/catalogs/download/files/" + catalog.getId());
     }
 
     public CatalogDTO createCatalog(CatalogCreateDTO dto, MultipartFile file) throws IOException {
@@ -62,7 +62,7 @@ public class CatalogService {
         catalog.setFilePath(savedFileName);
 
         Catalog savedCatalog = catalogRepository.save(catalog);
-        return catalogMapper.toDto(savedCatalog, downloadBaseUrl + "/api/catalogs/download/" + savedFileName);
+        return catalogMapper.toDto(savedCatalog, downloadBaseUrl + "/api/catalogs/download/files/" + savedCatalog.getId());
     }
 
     public CatalogDTO updateCatalog(Long id, CatalogUpdateDTO dto, MultipartFile file) throws IOException {
@@ -85,7 +85,7 @@ public class CatalogService {
             catalog.setFilePath(savedFileName);
         }
         Catalog updated = catalogRepository.save(catalog);
-        return catalogMapper.toDto(updated, downloadBaseUrl + "/api/catalogs/download/" + updated.getFilePath());
+        return catalogMapper.toDto(updated, downloadBaseUrl + "/api/catalogs/download/files/" + updated.getId());
     }
 
     public void deleteCatalog(Long id) throws IOException {

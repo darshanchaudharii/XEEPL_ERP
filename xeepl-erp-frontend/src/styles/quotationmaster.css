@@ -36,18 +36,26 @@
 }
 
 @media (max-width: 768px) {
+  .quotationmaster {
+    padding: 10px;
+  }
+  
   .search-filter-bar {
     flex-direction: column;
+    padding: 12px;
   }
   
   .search-filter-bar .search-input,
   .search-filter-bar .filter-select,
   .search-filter-bar .date-input {
     width: 100%;
+    min-height: 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
   }
   
   .search-filter-bar .clear-btn {
     width: 100%;
+    min-height: 44px;
   }
 }
 

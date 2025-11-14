@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/user-roles")
 public class UserRoleController {@GetMapping
 public ResponseEntity<UserRole[]> getUserRoles() {
-    // Returns all enum values as an array
     return ResponseEntity.ok(UserRole.values());
 }
 }

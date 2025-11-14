@@ -8,6 +8,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const user = authService.getUser();
   const [isVisible, setIsVisible] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const lastScrollY = useRef(0);
   const mouseYRef = useRef(0);
   const hideTimeoutRef = useRef(null);
@@ -20,6 +21,30 @@ const Navbar = () => {
     authService.logout();
     navigate('/login');
   };
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+  };
+
+  // Close menu when route changes
+  useEffect(() => {
+    closeMenu();
+  }, [location.pathname]);
+
+  // Close menu on escape key
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && isMenuOpen) {
+        closeMenu();
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isMenuOpen]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -93,29 +118,46 @@ const Navbar = () => {
   }, []);
 
   return (
-    <nav className={`navbar ${isVisible ? 'navbar-visible' : 'navbar-hidden'}`}>
-      <div className="navbar-brand">
-        <Link to="/">XEEPL ERP</Link>
-      </div>
-      <ul className="navbar-menu">
-        <li><Link to="/users" className={isActive('/users')}>Users</Link></li>
-        <li><Link to="/sections" className={isActive('/sections')}>Sections</Link></li>
-        <li><Link to="/contents" className={isActive('/contents')}>Contents</Link></li>
-        <li><Link to="/items" className={isActive('/items')}>Items</Link></li>
-        <li><Link to="/raw-materials" className={isActive('/raw-materials')}>Raw Materials</Link></li>
-        <li><Link to="/catalogs" className={isActive('/catalogs')}>Catalogs</Link></li>
-        <li><Link to="/quotations" className={isActive('/quotations')}>Quotations</Link></li>
-        <li><Link to="/make-quotation" className={isActive('/make-quotation')}>Make Quotation</Link></li>
-        {user && (
-          <li className="user-info">
-            <span className="user-name">{user.fullName || user.username}</span>
+    <>
+      <nav className={`navbar ${isVisible ? 'navbar-visible' : 'navbar-hidden'}`}>
+        <div className="navbar-brand">
+          <Link to="/">XEEPL ERP</Link>
+        </div>
+        <button 
+          className="navbar-hamburger"
+          onClick={toggleMenu}
+          aria-label="Toggle navigation menu"
+          aria-expanded={isMenuOpen}
+        >
+          <i className={`fas ${isMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
+        </button>
+        <ul className={`navbar-menu ${isMenuOpen ? 'navbar-menu-open' : ''}`}>
+          <li><Link to="/users" className={isActive('/users')} onClick={closeMenu}>Users</Link></li>
+          <li><Link to="/sections" className={isActive('/sections')} onClick={closeMenu}>Sections</Link></li>
+          <li><Link to="/contents" className={isActive('/contents')} onClick={closeMenu}>Contents</Link></li>
+          <li><Link to="/items" className={isActive('/items')} onClick={closeMenu}>Items</Link></li>
+          <li><Link to="/raw-materials" className={isActive('/raw-materials')} onClick={closeMenu}>Raw Materials</Link></li>
+          <li><Link to="/catalogs" className={isActive('/catalogs')} onClick={closeMenu}>Catalogs</Link></li>
+          <li><Link to="/quotations" className={isActive('/quotations')} onClick={closeMenu}>Quotations</Link></li>
+          <li><Link to="/make-quotation" className={isActive('/make-quotation')} onClick={closeMenu}>Make Quotation</Link></li>
+          {user && (
+            <li className="user-info">
+              <span className="user-name">{user.fullName || user.username}</span>
+            </li>
+          )}
+          <li>
+            <button onClick={handleLogout} className="logout-button" aria-label="Logout">Logout</button>
           </li>
-        )}
-        <li>
-          <button onClick={handleLogout} className="logout-button">Logout</button>
-        </li>
-      </ul>
-    </nav>
+        </ul>
+      </nav>
+      {isMenuOpen && (
+        <div 
+          className="navbar-overlay" 
+          onClick={closeMenu}
+          aria-hidden="true"
+        ></div>
+      )}
+    </>
   );
 };
 

@@ -8,9 +8,9 @@ import { catalogService } from '../../services/catalogService';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import Modal from '../common/Modal';
+import QuotationLinesTable from './QuotationLinesTable';
 import '../../styles/makequotation.css';
-import { downloadQuotationPDF } from '../../utils/pdfGenerator';
-import { getItemDescription, getRawMaterialDescription } from '../../utils/quotationFormatter'; 
+import { downloadQuotationPDF } from '../../utils/pdfGenerator'; 
 
 const MakeQuotation = () => {
   const navigate = useNavigate();
@@ -32,7 +32,7 @@ const MakeQuotation = () => {
   const [quotationLines, setQuotationLines] = useState([]);
   const [selectedCatalogs, setSelectedCatalogs] = useState([]);
   const [showRawPrices, setShowRawPrices] = useState(true);
-  const [showRemovedRaws, setShowRemovedRaws] = useState(false);
+  const [showRemovedRaws, setShowRemovedRaws] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('items');
@@ -46,11 +46,7 @@ const MakeQuotation = () => {
   const [editQty, setEditQty] = useState('');
   const [editRate, setEditRate] = useState('');
 
-  // Helper function to check if an ID is a temporary ID (created with Date.now())
-  // Database IDs are typically small integers, while Date.now() generates very large numbers
   const isTemporaryId = (id) => {
-    // If ID is greater than 1e12 (1 trillion), it's likely a timestamp-based temporary ID
-    // Database IDs are auto-incrementing and unlikely to exceed this threshold
     return id > 1e12;
   };
 
@@ -60,9 +56,7 @@ const MakeQuotation = () => {
       return;
     }
 
-    // Check if this is a temporary ID (unsaved line)
     if (isTemporaryId(lineId)) {
-      // Handle locally for unsaved lines
       const lineToRemove = quotationLines.find(line => line.id === lineId);
       if (lineToRemove) {
         setRemovedLines(prev => [...prev, { ...lineToRemove, removed: true }]);
@@ -71,13 +65,10 @@ const MakeQuotation = () => {
       return;
     }
 
-    // For saved lines, call the backend API
     try {
       setLoading(true);
       setError('');
-      // Call backend API to soft delete the line
       await quotationService.removeLine(lineId);
-      // Refresh quotation data to get updated state
       await handleSelectQuotation(quotationId);
     } catch (err) {
       setError('Failed to remove line: ' + err.message);
@@ -93,9 +84,7 @@ const MakeQuotation = () => {
       return;
     }
 
-    // Check if this is a temporary ID (unsaved line)
     if (isTemporaryId(lineId)) {
-      // Handle locally for unsaved lines
       const lineToRestore = removedLines.find(line => line.id === lineId);
       if (lineToRestore) {
         const restoredLine = { ...lineToRestore };
@@ -106,13 +95,10 @@ const MakeQuotation = () => {
       return;
     }
 
-    // For saved lines, call the backend API
     try {
       setLoading(true);
       setError('');
-      // Call backend API to restore the line
       await quotationService.undoRemoveLine(lineId);
-      // Refresh quotation data to get updated state
       await handleSelectQuotation(quotationId);
     } catch (err) {
       setError('Failed to restore line: ' + err.message);
@@ -122,7 +108,6 @@ const MakeQuotation = () => {
     }
   };
 
-  // decrement one quantity
   const handleDecrementQuantity = (lineId) => {
     setQuotationLines(prev => {
       const updated = prev.map(line => {
@@ -140,7 +125,6 @@ const MakeQuotation = () => {
     });
   };
 
-  // inline edit
   const startEdit = (line) => {
     setEditingLineId(line.id);
     setEditQty(String(line.quantity));
@@ -197,13 +181,12 @@ const MakeQuotation = () => {
     try {
       const [quotationsData, allUsersData, itemsData, rawMaterialsData, catalogsData] = await Promise.all([
         quotationService.getAllQuotations(),
-        userService.getAllUsers(), // Fetch all users, filter on frontend
+        userService.getAllUsers(),
         itemService.getAllItems(),
         rawMaterialService.getAllRawMaterials(),
         catalogService.getAllCatalogs()
       ]);
       
-      // Filter customers from all users on frontend
       const customersData = Array.isArray(allUsersData) 
         ? allUsersData.filter(user => user.role === 'Customer' || user.role === 'CUSTOMER')
         : [];
@@ -234,12 +217,14 @@ const MakeQuotation = () => {
 
     setLoading(true);
     try {
-      // Always fetch with includeRemoved=true to get all lines (we'll filter on frontend based on toggle)
       const quotation = await quotationService.getQuotationByIdWithRemoved(qId, true);
-      // Enrich quotation lines with itemId by matching with items list
       const allLines = (quotation.items || []);
-      const enrichedLines = allLines.filter(l => !l.removed).map(line => {
-        // If itemId is missing, try to find it by matching itemDescription
+      const sortedLines = [...allLines].sort((a, b) => {
+        const seqA = a.sequence != null ? a.sequence : (a.id || 0);
+        const seqB = b.sequence != null ? b.sequence : (b.id || 0);
+        return seqA - seqB;
+      });
+      const enrichedLines = sortedLines.filter(l => !l.removed).map(line => {
         if (!line.itemId && line.itemDescription) {
           const matchedItem = items.find(i => 
             i.itemName === line.itemDescription || 
@@ -253,7 +238,6 @@ const MakeQuotation = () => {
             };
           }
         }
-        // If rawId is missing, try to find it
         if (line.isRawMaterial && !line.rawId && line.itemDescription) {
           const rawName = line.itemDescription.replace(' (Raw Material)', '');
           const matchedRaw = rawMaterials.find(r => r.name === rawName);
@@ -315,11 +299,9 @@ const MakeQuotation = () => {
       setError('');
       await quotationService.assignCustomer(quotationId, customerId);
       setAssignSuccess(true);
-      // refresh selected quotation minimal fields
       const quotation = await quotationService.getQuotationById(quotationId);
       setCustomerId(quotation.customer?.id || '');
       setAssignedCustomerId(quotation.customer?.id || '');
-      // auto-hide success effect
       setTimeout(() => setAssignSuccess(false), 1200);
     } catch (err) {
       setError('Failed to assign customer: ' + err.message);
@@ -344,7 +326,6 @@ const MakeQuotation = () => {
     const qtyToAdd = Number(itemQty) || 1;
     const rate = Number(itemRate) || Number(item.itemPrice) || 0;
 
-    // Check if item already exists (match by itemId first, then by itemDescription as fallback)
     const existingLineIndex = quotationLines.findIndex(
       line => !line.isRawMaterial && (
         line.itemId === item.id || 
@@ -353,15 +334,14 @@ const MakeQuotation = () => {
     );
 
     if (existingLineIndex !== -1) {
-      // Increment quantity on existing line
       setQuotationLines(prev => {
         const updated = prev.map((line, idx) => {
-          if (idx === existingLineIndex) {
-            const newQty = Number(line.quantity) + qtyToAdd;
-            return {
-              ...line,
-              itemId: item.id, // Ensure itemId is set
-              quantity: newQty,
+            if (idx === existingLineIndex) {
+              const newQty = Number(line.quantity) + qtyToAdd;
+              return {
+                ...line,
+                itemId: item.id,
+                quantity: newQty,
               total: newQty * Number(line.unitPrice || rate),
               itemLongDescription: item.itemDescription || item.description || line.itemLongDescription || ''
             };
@@ -371,7 +351,6 @@ const MakeQuotation = () => {
         return updated;
       });
     } else {
-      // Add new line
       const newLine = {
         id: Date.now(),
         itemId: item.id,
@@ -380,7 +359,8 @@ const MakeQuotation = () => {
         quantity: qtyToAdd,
         unitPrice: rate,
         total: qtyToAdd * rate,
-        isRawMaterial: false
+        isRawMaterial: false,
+        sequence: quotationLines.length
       };
       setQuotationLines(prev => [...prev, newLine]);
     }
@@ -402,12 +382,10 @@ const MakeQuotation = () => {
     const qtyToAdd = Number(rawQty) || 1;
     const rate = Number(rawRate) || Number(raw.price) || 0;
 
-    // Attach to the most recently added ITEM row (parent)
     const lastItem = [...quotationLines].reverse().find(l => !l.isRawMaterial);
     const parentItemId = lastItem ? lastItem.id : null;
     const description = `${raw.name} (Raw Material)`;
     
-    // Check if raw material already exists with same parent
     const existingLineIndex = quotationLines.findIndex(
       line => line.isRawMaterial && (
         (line.rawId === raw.id && line.parentItemId === parentItemId) ||
@@ -416,15 +394,14 @@ const MakeQuotation = () => {
     );
 
     if (existingLineIndex !== -1) {
-      // Increment quantity on existing raw material line
       setQuotationLines(prev => {
         const updated = prev.map((line, idx) => {
-          if (idx === existingLineIndex) {
-            const newQty = Number(line.quantity) + qtyToAdd;
-            return {
-              ...line,
-              rawId: raw.id, // Ensure rawId is set
-              quantity: newQty,
+            if (idx === existingLineIndex) {
+              const newQty = Number(line.quantity) + qtyToAdd;
+              return {
+                ...line,
+                rawId: raw.id,
+                quantity: newQty,
               total: newQty * Number(line.unitPrice || rate)
             };
           }
@@ -433,7 +410,6 @@ const MakeQuotation = () => {
         return updated;
       });
     } else {
-      // Add new raw material line
       const newLine = {
         id: Date.now(),
         rawId: raw.id,
@@ -442,7 +418,8 @@ const MakeQuotation = () => {
         unitPrice: rate,
         total: qtyToAdd * rate,
         isRawMaterial: true,
-        parentItemId
+        parentItemId,
+        sequence: quotationLines.length
       };
       setQuotationLines(prev => [...prev, newLine]);
     }
@@ -470,30 +447,21 @@ const MakeQuotation = () => {
 
     setLoading(true);
     try {
-      // Fetch the latest quotation state with all lines (including removed) to ensure we have the most up-to-date data
       const quotation = await quotationService.getQuotationByIdWithRemoved(quotationId, true);
       
-      // Get all lines from the database (both active and removed)
       const allDbLines = quotation.items || [];
       
-      // Create a map of database lines by ID for quick lookup
       const dbLinesMap = new Map(allDbLines.map(line => [line.id, { ...line }]));
       
-      // Process removed lines FIRST to ensure they're marked as removed
-      // This prevents active lines from overwriting the removed state
       removedLines.forEach(removedLine => {
         if (!isTemporaryId(removedLine.id)) {
-          // Only process lines with real database IDs
           if (dbLinesMap.has(removedLine.id)) {
-            // Existing line - mark as removed
             const dbLine = dbLinesMap.get(removedLine.id);
             dbLine.removed = true;
-            // Update other fields from local state if needed
             dbLine.itemDescription = removedLine.itemDescription;
             dbLine.quantity = removedLine.quantity;
             dbLine.unitPrice = removedLine.unitPrice;
           } else {
-            // Removed line exists in removedLines but not in DB - add it as removed
             dbLinesMap.set(removedLine.id, {
               id: removedLine.id,
               itemDescription: removedLine.itemDescription,
@@ -508,20 +476,16 @@ const MakeQuotation = () => {
         }
       });
       
-      // Process all local active lines (including new ones with temporary IDs)
-      // IMPORTANT: Only process lines that are NOT in removedLines to avoid overwriting removed state
       const removedLineIds = new Set(removedLines.map(rl => rl.id).filter(id => !isTemporaryId(id)));
       
       quotationLines.forEach(localLine => {
-        // Skip if this line is in removedLines (already processed above)
         if (!isTemporaryId(localLine.id) && removedLineIds.has(localLine.id)) {
-          return; // Skip - already marked as removed
+          return;
         }
         
         if (isTemporaryId(localLine.id)) {
-          // New line with temporary ID - add it as a new line (without ID)
           dbLinesMap.set(localLine.id, {
-            id: null, // Will be generated by database
+            id: null,
             itemDescription: localLine.itemDescription,
             quantity: localLine.quantity,
             unitPrice: localLine.unitPrice,
@@ -531,17 +495,14 @@ const MakeQuotation = () => {
             removed: false
           });
         } else if (dbLinesMap.has(localLine.id)) {
-          // Existing line - update with local changes, but preserve removed state if it was set
           const dbLine = dbLinesMap.get(localLine.id);
-          // Only update removed to false if it's not already marked as removed
           if (!dbLine.removed) {
             dbLine.itemDescription = localLine.itemDescription;
             dbLine.quantity = localLine.quantity;
             dbLine.unitPrice = localLine.unitPrice;
-            dbLine.removed = false; // Active lines are not removed
+            dbLine.removed = false;
           }
         } else {
-          // Line exists locally but not in DB - add it
           dbLinesMap.set(localLine.id, {
             id: localLine.id,
             itemDescription: localLine.itemDescription,
@@ -555,55 +516,72 @@ const MakeQuotation = () => {
         }
       });
       
-      // Convert to update format
-      // For new lines, we need to handle parentItemId mapping if it references a temporary ID
-      // Strategy: Save items first (no parent), then raw materials (with parent reference by order)
-      const allLinesArray = Array.from(dbLinesMap.values());
+      const orderedLines = [];
       
-      // Separate items and raw materials
-      const items = allLinesArray.filter(line => !line.isRawMaterial);
-      const rawMaterials = allLinesArray.filter(line => line.isRawMaterial);
+      quotationLines.forEach((localLine, index) => {
+        if (!isTemporaryId(localLine.id) && removedLineIds.has(localLine.id)) {
+          return;
+        }
+        
+        const dbLine = dbLinesMap.get(localLine.id);
+        const sequence = localLine.sequence != null ? localLine.sequence : (dbLine?.sequence != null ? dbLine.sequence : index);
+        orderedLines.push({
+          id: isTemporaryId(localLine.id) ? null : (dbLine?.id || localLine.id),
+          itemDescription: localLine.itemDescription,
+          quantity: localLine.quantity,
+          unitPrice: localLine.unitPrice,
+          isRawMaterial: localLine.isRawMaterial || false,
+          parentItemId: localLine.parentItemId,
+          rawId: localLine.rawId,
+          removed: false,
+          sequence: sequence
+        });
+      });
       
-      // Create a mapping from temporary parent IDs to array index for items
-      const tempIdToIndexMap = new Map();
-      items.forEach((item, index) => {
-        if (isTemporaryId(item.id)) {
-          tempIdToIndexMap.set(item.id, index);
+      removedLines.forEach(removedLine => {
+        if (!isTemporaryId(removedLine.id)) {
+          const existingIndex = orderedLines.findIndex(line => line.id === removedLine.id);
+          if (existingIndex === -1) {
+            const dbLine = dbLinesMap.get(removedLine.id);
+            const sequence = removedLine.sequence != null ? removedLine.sequence : (dbLine?.sequence != null ? dbLine.sequence : orderedLines.length);
+            orderedLines.push({
+              id: removedLine.id,
+              itemDescription: removedLine.itemDescription,
+              quantity: removedLine.quantity,
+              unitPrice: removedLine.unitPrice,
+              isRawMaterial: removedLine.isRawMaterial || false,
+              parentItemId: removedLine.parentItemId,
+              rawId: removedLine.rawId,
+              removed: true,
+              sequence: sequence
+            });
+          } else {
+            orderedLines[existingIndex].removed = true;
+          }
         }
       });
       
-      // Convert items first (no parent references)
-      // IMPORTANT: Explicitly set removed flag - don't rely on default
-      const itemsToSave = items.map((line, index) => ({
-        id: line.id, // null for new lines
+      orderedLines.sort((a, b) => {
+        const seqA = a.sequence != null ? a.sequence : 999999;
+        const seqB = b.sequence != null ? b.sequence : 999999;
+        return seqA - seqB;
+      });
+      
+      orderedLines.forEach((line, index) => {
+        line.sequence = index;
+      });
+      
+      const allLines = orderedLines.map((line) => ({
+        id: line.id,
         itemDescription: line.itemDescription,
         quantity: line.quantity,
         unitPrice: line.unitPrice,
-        isRawMaterial: false,
-        parentItemId: null,
+        isRawMaterial: line.isRawMaterial || false,
+        parentItemId: line.parentItemId,
         rawId: line.rawId,
-        removed: Boolean(line.removed) // Explicitly convert to boolean
+        removed: Boolean(line.removed),
+        sequence: line.sequence
       }));
-      
-      // Convert raw materials with parentItemId mapping
-      // IMPORTANT: Explicitly set removed flag - don't rely on default
-      const rawMaterialsToSave = rawMaterials.map(line => {
-        let parentItemId = line.parentItemId;
-        
-        return {
-          id: line.id,
-          itemDescription: line.itemDescription,
-          quantity: line.quantity,
-          unitPrice: line.unitPrice,
-          isRawMaterial: true,
-          parentItemId: parentItemId, // Backend will handle mapping
-          rawId: line.rawId,
-          removed: Boolean(line.removed) // Explicitly convert to boolean
-        };
-      });
-      
-      // Combine: items first, then raw materials
-      const allLines = [...itemsToSave, ...rawMaterialsToSave];
       
       const updateData = {
         name: quotation.name,
@@ -786,7 +764,7 @@ const MakeQuotation = () => {
                     checked={showRemovedRaws}
                     onChange={(e) => setShowRemovedRaws(e.target.checked)}
                   />
-                  <span>Show removed raws</span>
+                  <p>Show removed raws</p>
                 </label>
               </div>
 
@@ -935,8 +913,7 @@ const MakeQuotation = () => {
           {loading ? (
             <LoadingSpinner message="Loading quotation..." />
           ) : (
-            <div className="table-section">
-              {/* Search and Filter Bar - Flush above table */}
+              <div className="table-section">
               <div className="table-controls-bar">
                 <div className="search-input-wrapper">
                   <input
@@ -965,187 +942,28 @@ const MakeQuotation = () => {
                 </label>
               </div>
 
-              {/* Table */}
-              <div className="table-wrapper">
-                <table className="quotation-table modern-table">
-                <thead>
-                  <tr>
-                    <th>Sr No</th>
-                    <th>Description</th>
-                    <th>Qty</th>
-                    <th>Rate / Unit in ₹</th>
-                    <th>Total Amount</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {quotationLines.length === 0 ? (
-                    <tr>
-                      <td colSpan="6" className="no-data">
-                        {quotationId ? 'No items in quotation' : 'Select a quotation'}
-                      </td>
-                    </tr>
-                  ) : (
-                    <>
-                      {quotationLines
-                        .filter(l => !l.isRawMaterial) // only items for main rows
-                        .filter(line => {
-                          if (!searchQuery.trim()) return true;
-                          const query = searchQuery.toLowerCase();
-                          return line.itemDescription.toLowerCase().includes(query);
-                        })
-                        .map((line, index) => (
-                          <React.Fragment key={line.id}>
-                            <tr>
-                              <td>{index + 1}</td>
-                                    <td>
-                                <div>
-                                  <strong>{line.itemDescription}</strong>
-                                  {(() => {
-                                    const itemDesc = getItemDescription(line, items);
-                                    return itemDesc ? (
-                                      <div style={{ fontSize: '12px', color: '#666', marginTop: 4, fontStyle: 'normal' }}>
-                                        {itemDesc}
-                                      </div>
-                                    ) : null;
-                                  })()}
-                                </div>
-                              </td>
-                              <td>
-                                {editingLineId === line.id ? (
-                                  <input type="number" value={editQty} onChange={(e) => setEditQty(e.target.value)} min="1" />
-                                ) : (
-                                  line.quantity
-                                )}
-                              </td>
-                              <td>
-                                {editingLineId === line.id ? (
-                                  <input type="number" value={editRate} onChange={(e) => setEditRate(e.target.value)} step="0.01" />
-                                ) : (
-                                  `₹${Number(line.unitPrice).toFixed(2)}`
-                                )}
-                              </td>
-                              <td>₹{Number(line.total || (line.quantity * line.unitPrice)).toFixed(2)}</td>
-                              <td>
-                                {editingLineId === line.id ? (
-                                  <div className="row-actions">
-                                    <button className="btn btn-xs btn-save" onClick={() => saveEdit(line.id)} title="Save"><i className="fas fa-check"></i></button>
-                                    <button className="btn btn-xs btn-cancel" onClick={cancelEdit} title="Cancel"><i className="fas fa-times"></i></button>
-                                  </div>
-                                ) : (
-                                  <div className="row-actions">
-                                    {line.quantity > 1 && (
-                                      <button 
-                                        className="btn btn-xs btn-minus"
-                                        onClick={() => handleDecrementQuantity(line.id)}
-                                        title="Remove one item"
-                                      >
-                                        <i className="fas fa-minus"></i>
-                                      </button>
-                                    )}
-                                    <button className="btn btn-xs btn-edit" onClick={() => startEdit(line)} title="Edit"><i className="fas fa-pen"></i></button>
-                                    <button 
-                                      className="btn btn-xs btn-delete"
-                                      onClick={() => handleRemoveLine(line.id)}
-                                      title="Remove"
-                                    >
-                                      <i className="fas fa-trash"></i>
-                                    </button>
-                                  </div>
-                                )}
-                              </td>
-                            </tr>
-                            {
-                              [
-                                ...quotationLines.filter(raw => raw.isRawMaterial && raw.parentItemId === line.id).map(r => ({...r, _removed:false})),
-                                ...(showRemovedRaws ? removedLines.filter(raw => raw.isRawMaterial && raw.parentItemId === line.id).map(r => ({...r, _removed:true})) : [])
-                              ]
-                                .sort((a,b) => a.id - b.id)
-                                .map((raw, rawIndex) => (
-                                  <tr key={`${raw._removed?'removed-':''}${raw.id}`} className={raw._removed ? 'row-removed' : ''}>
-                                    <td></td>
-                                    <td style={{ paddingLeft: 24 }}>
-                                      <div>
-                                        <strong>{String.fromCharCode(97 + rawIndex)}) {raw._removed ? <><s>{raw.itemDescription}</s></> : raw.itemDescription}</strong>
-                                        {raw._removed && <em> (Removed)</em>}
-                                        {(() => {
-                                          const rawDesc = getRawMaterialDescription(raw, rawMaterials);
-                                          return rawDesc ? (
-                                            <div style={{ fontSize: '12px', color: '#666', marginTop: 4, fontStyle: 'normal' }}>
-                                              {rawDesc}
-                                            </div>
-                                          ) : null;
-                                        })()}
-                                      </div>
-                                    </td>
-                                    <td>
-                                      {editingLineId === raw.id && !raw._removed ? (
-                                        <input type="number" value={editQty} onChange={(e) => setEditQty(e.target.value)} min="1" />
-                                      ) : (
-                                        raw._removed ? <s>{raw.quantity}</s> : raw.quantity
-                                      )}
-                                    </td>
-                                    <td>
-                                      {showRawPrices ? (
-                                        editingLineId === raw.id && !raw._removed ? (
-                                          <input type="number" value={editRate} onChange={(e) => setEditRate(e.target.value)} step="0.01" />
-                                        ) : (
-                                          raw._removed ? <s>₹{Number(raw.unitPrice).toFixed(2)}</s> : `₹${Number(raw.unitPrice).toFixed(2)}`
-                                        )
-                                      ) : '—'}
-                                    </td>
-                                    <td>—</td>
-                                    <td>
-                                      {raw._removed ? (
-                                        <div className="row-actions">
-                                          <button className="btn btn-xs btn-undo" onClick={() => handleUndoRemove(raw.id)} title="Undo"><i className="fas fa-undo"></i></button>
-                                        </div>
-                                      ) : editingLineId === raw.id ? (
-                                        <div className="row-actions">
-                                          <button className="btn btn-xs btn-save" onClick={() => saveEdit(raw.id)} title="Save"><i className="fas fa-check"></i></button>
-                                          <button className="btn btn-xs btn-cancel" onClick={cancelEdit} title="Cancel"><i className="fas fa-times"></i></button>
-                                        </div>
-                                      ) : (
-                                        <div className="row-actions">
-                                          {raw.quantity > 1 && (
-                                            <button
-                                              className="btn btn-xs btn-minus"
-                                              onClick={() => handleDecrementQuantity(raw.id)}
-                                              title="Remove one raw"
-                                            >
-                                              <i className="fas fa-minus"></i>
-                                            </button>
-                                          )}
-                                          <button className="btn btn-xs btn-edit" onClick={() => startEdit(raw)} title="Edit"><i className="fas fa-pen"></i></button>
-                                          <button
-                                            className="btn btn-xs btn-delete"
-                                            onClick={() => handleRemoveLine(raw.id)}
-                                            title="Remove"
-                                          >
-                                            <i className="fas fa-trash"></i>
-                                          </button>
-                                        </div>
-                                      )}
-                                    </td>
-                                  </tr>
-                                ))
-                            }
-                          </React.Fragment>
-                        ))}
-                    </>
-                  )}
-                  <tr className="grand-total-row">
-                    <td colSpan="4" className="grand-total-label">
-                      <strong>Grand Total</strong>
-                    </td>
-                    <td className="grand-total-value">
-                      <strong>₹{calculateGrandTotal().toFixed(2)}</strong>
-                    </td>
-                    <td></td>
-                  </tr>
-                </tbody>
-              </table>
-              </div>
+              <QuotationLinesTable
+                quotationLines={quotationLines}
+                removedLines={removedLines}
+                showRawPrices={showRawPrices}
+                showRemovedRaws={showRemovedRaws}
+                searchQuery={searchQuery}
+                editingLineId={editingLineId}
+                editQty={editQty}
+                editRate={editRate}
+                items={items}
+                rawMaterials={rawMaterials}
+                quotationId={quotationId}
+                onStartEdit={startEdit}
+                onCancelEdit={cancelEdit}
+                onSaveEdit={saveEdit}
+                onRemoveLine={handleRemoveLine}
+                onUndoRemove={handleUndoRemove}
+                onDecrementQuantity={handleDecrementQuantity}
+                onEditQtyChange={setEditQty}
+                onEditRateChange={setEditRate}
+                calculateGrandTotal={calculateGrandTotal}
+              />
             </div>
           )}
 
@@ -1156,7 +974,6 @@ const MakeQuotation = () => {
         </main>
       </div>
 
-      {/* Catalog Modal */}
       <Modal
         isOpen={catalogModalOpen}
         onClose={() => {
@@ -1251,12 +1068,10 @@ const MakeQuotation = () => {
                   setLoading(true);
                   setError('');
                   await quotationService.linkCatalogs(quotationId, selectedCatalogs);
-                  // Refresh quotation data to get updated linked catalogs
                   const quotation = await quotationService.getQuotationById(quotationId);
                   setSelectedCatalogs(quotation.linkedCatalogs?.map(c => c.id) || []);
                   setCatalogModalOpen(false);
                   setCatalogFilter('');
-                  // Refresh catalogs list
                   const catalogsData = await catalogService.getAllCatalogs();
                   setCatalogs(catalogsData);
                 } catch (err) {

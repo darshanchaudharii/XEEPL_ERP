@@ -16,6 +16,12 @@
   min-height: calc(100vh - 70px);
 }
 
+@media (max-width: 768px) {
+  .main-content {
+    padding-top: 60px; /* Slightly less padding on mobile */
+  }
+}
+
 /* Page Container */
 .page-container {
   max-width: 1400px;

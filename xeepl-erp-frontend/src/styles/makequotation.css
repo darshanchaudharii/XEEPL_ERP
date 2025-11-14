@@ -298,7 +298,6 @@
   gap: 10px;
   cursor: pointer;
   margin-bottom: 0;
-  user-select: none;
   padding: 8px 12px;
   border-radius: 8px;
   transition: background-color 0.2s ease;
@@ -345,9 +344,6 @@
   accent-color: #1f8a4c;
 }
 
-.radio-label span {
-  user-select: none;
-}
 
 /* Toggle switch styling for toggle-label */
 .toggle-label input[type="checkbox"] {
@@ -693,10 +689,27 @@
     padding: 10px;
   }
   
+  .make-quotation-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .quotation-sidebar {
+    order: 2;
+  }
+  
+  .quotation-content {
+    order: 1;
+  }
+  
   .content-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 15px;
+  }
+  
+  .content-header h2 {
+    font-size: 18px;
   }
   
   .header-actions {
@@ -720,12 +733,43 @@
   
   .form-row .btn-add {
     width: 100%;
+    min-height: 44px;
   }
   
   .customer-actions {
     flex-direction: column;
   }
-  .btn-undo {
+  
+  .customer-actions .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+  
+  .sidebar-card {
+    margin-bottom: 16px;
+  }
+  
+  .card-body {
+    padding: 16px;
+  }
+  
+  .form-group input,
+  .form-group select {
+    min-height: 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  .btn {
+    min-height: 44px;
+    padding: 12px 16px;
+  }
+  
+  .btn-block {
+    min-height: 44px;
+  }
+}
+
+.btn-undo {
   background-color: #f39c12;
   color: white;
   padding: 6px 10px;
@@ -748,6 +792,5 @@
 .quantity-controls {
   display: flex;
   gap: 5px;
-}
 }
 

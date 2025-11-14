@@ -43,12 +43,14 @@ public class QuotationMapper {
                     c.setLogoUrl(cat.getFilePath());
                     return c;
                 }).collect(Collectors.toList()));
-        // Get all items from quotation
         List<QuotationLine> allItems = quotation.getItems() != null ? quotation.getItems() : new ArrayList<>();
         
-        // Filter items based on includeRemoved flag
-        // If includeRemoved is true, include ALL items (both removed and not removed)
-        // If includeRemoved is false, only include items where removed is NOT true
+        allItems.sort((a, b) -> {
+            Integer seqA = a.getSequence() != null ? a.getSequence() : 0;
+            Integer seqB = b.getSequence() != null ? b.getSequence() : 0;
+                return seqA.compareTo(seqB);
+            });
+        
         List<QuotationLineDTO> filteredItems = allItems.stream()
                 .filter(line -> {
                     boolean isRemoved = Boolean.TRUE.equals(line.getRemoved());
@@ -72,6 +74,7 @@ public class QuotationMapper {
         l.setParentItemId(line.getParentItemId());
         l.setRawId(line.getRawId());
         l.setRemoved(line.getRemoved());
+        l.setSequence(line.getSequence());
         return l;
     }
 }

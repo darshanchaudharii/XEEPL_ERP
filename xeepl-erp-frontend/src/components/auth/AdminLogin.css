@@ -119,6 +119,49 @@
   color: #999;
 }
 
+/* Password Input Wrapper */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper input {
+  padding-right: 50px;
+  width: 100%;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  transition: color 0.3s;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 4px;
+}
+
+.password-toggle-btn:hover {
+  color: #1f8a4c;
+  background-color: rgba(31, 138, 76, 0.1);
+}
+
+.password-toggle-btn:focus {
+  outline: 2px solid #1f8a4c;
+  outline-offset: 2px;
+}
+
+.password-toggle-btn i {
+  font-size: 18px;
+}
+
 .login-button {
   padding: 16px;
   background: linear-gradient(135deg, #1f8a4c 0%, #2ecc71 100%);

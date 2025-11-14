@@ -53,6 +53,9 @@ public class QuotationLine {
     @Column(name = "removed", nullable = false)
     private Boolean removed = false;
 
+    @Column(name = "sequence", nullable = false)
+    private Integer sequence = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

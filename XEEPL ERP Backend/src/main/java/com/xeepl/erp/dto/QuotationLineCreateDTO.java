@@ -22,4 +22,5 @@ public class QuotationLineCreateDTO {
     private Boolean isRawMaterial;
     private Long parentItemId;
     private Long rawId;
+    private Integer sequence;
 }

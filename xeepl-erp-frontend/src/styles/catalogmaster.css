@@ -38,3 +38,26 @@
   background: linear-gradient(135deg, #3498db 0%, #5dade2 100%);
 }
 
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .catalogmaster {
+    padding: 10px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    min-height: 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .btn {
+    min-height: 44px;
+    padding: 12px 16px;
+  }
+
+  .file-upload-section {
+    gap: 12px;
+  }
+}
+

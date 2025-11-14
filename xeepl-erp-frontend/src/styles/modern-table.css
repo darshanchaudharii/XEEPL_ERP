@@ -1,23 +1,4 @@
-/**
- * Modern Table Styling System
- * Unified, professional table design with animations and modern UX
- * 
- * Color Theme:
- * - Primary: #1f8a4c (Green)
- * - Secondary: #2ecc71 (Light Green)
- * - Accent: #3498db (Blue)
- * - Danger: #e74c3c (Red)
- * - Warning: #f39c12 (Orange)
- * - Background: #ffffff (White)
- * - Surface: #f8f9fa (Light Gray)
- * - Border: #e0e0e0 (Gray)
- */
 
-/* ============================================
-   TABLE CONTAINER & SEARCH BAR
-   ============================================ */
-
-/* Unified container for search/filter bar and table */
 .table-section {
   background: #ffffff;
   border-radius: 12px;
@@ -604,9 +585,7 @@
   color: #e74c3c;
 }
 
-/* ============================================
-   RESPONSIVE DESIGN
-   ============================================ */
+/* Responsive design */
 
 @media (max-width: 768px) {
   .table-controls-bar {
@@ -701,11 +680,250 @@
   }
 }
 
+/* ============================================
+   MOBILE CARD LAYOUT (≤768px)
+   ============================================ */
+
+.quotation-lines-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0;
+}
+
+.quotation-line-card {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.quotation-line-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+.card-header-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.card-sr-no {
+  background: linear-gradient(135deg, #1f8a4c 0%, #2ecc71 100%);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.card-description {
+  flex: 1;
+}
+
+.card-description strong {
+  display: block;
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.card-description-sub {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+  font-style: normal;
+}
+
+.card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.card-row:last-of-type {
+  border-bottom: none;
+}
+
+.card-label {
+  font-weight: 600;
+  color: #666;
+  font-size: 14px;
+  flex: 0 0 40%;
+}
+
+.card-value {
+  color: #333;
+  font-size: 14px;
+  text-align: right;
+  flex: 1;
+}
+
+.card-total {
+  font-weight: 600;
+  color: #1f8a4c;
+  font-size: 16px;
+}
+
+.card-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  min-height: 44px;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+  flex-wrap: wrap;
+}
+
+.card-actions .btn-xs {
+  flex: 1;
+  min-width: 80px;
+  justify-content: center;
+}
+
+/* Raw Materials Container */
+.raw-materials-container {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 2px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.raw-material-card {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-left: 4px solid #1f8a4c;
+  border-radius: 6px;
+  padding: 12px;
+  margin-left: 16px;
+}
+
+.raw-material-card.raw-removed {
+  background: #fff9e6;
+  border-left-color: #f39c12;
+  opacity: 0.8;
+}
+
+.raw-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.raw-label {
+  background: #1f8a4c;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.raw-header strong {
+  color: #333;
+  font-size: 14px;
+}
+
+.raw-header .strikethrough {
+  text-decoration: line-through;
+  color: #999;
+}
+
+.removed-badge {
+  font-size: 12px;
+  color: #856404;
+  font-style: italic;
+}
+
+.raw-description-sub {
+  font-size: 11px;
+  color: #666;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+.no-data-card {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+  font-style: italic;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px dashed #e0e0e0;
+}
+
+.grand-total-card {
+  background: linear-gradient(135deg, #e8f5e9 0%, #d5f4e6 100%);
+  border: 2px solid #1f8a4c;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.grand-total-card .grand-total-label {
+  font-weight: 600;
+  font-size: 16px;
+  color: #1f8a4c;
+}
+
+.grand-total-card .grand-total-value {
+  font-weight: 700;
+  font-size: 20px;
+  color: #1f8a4c;
+}
+
+/* Hide table on mobile, show cards */
+@media (max-width: 768px) {
+  .table-wrapper {
+    display: none;
+  }
+  
+  .quotation-lines-mobile {
+    display: flex;
+  }
+}
+
+/* Hide cards on desktop, show table */
+@media (min-width: 769px) {
+  .quotation-lines-mobile {
+    display: none;
+  }
+  
+  .table-wrapper {
+    display: block;
+  }
+}
+
 /* Print styles */
 @media print {
   .table-controls-bar,
   .filter-controls-row,
-  .row-actions {
+  .row-actions,
+  .quotation-lines-mobile {
     display: none;
   }
 
@@ -713,6 +931,12 @@
   .quotation-table,
   .data-table {
     box-shadow: none;
+  }
+  
+  .modern-table thead,
+  .quotation-table thead,
+  .data-table thead {
+    display: table-header-group;
   }
 }
 
